@@ -18,7 +18,8 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   setnames(weights, c("samp", "samp1", "wgt"))
 
   stopifnot(setequal(unique(weights$samp), unique(weights$samp1))) # How handle this??
-  sites = data.table(samp = sort(unique(c(weights$samp))))[, samp_id := 1:.N]
+  sites = data.table(samp = sort(unique(c(weights$samp))))[,
+                                                           samp_id := 1:.N]
 
   # Filter sites in data not present in weights
   exclude_sites = setdiff(unique(data$samp), sites$samp)
@@ -52,8 +53,8 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   tfs = tfcalc(data, freqs, species, sites, times, Rstar = Rstar, no_bench = bench_exclude)
 
   freqs$species = species$spec[match(freqs$spec_id, species$spec_id)]
-  freqs$spec_id = NULL
   freqs$samp = sites$samp[match(freqs$samp_id, sites$samp_id)]
+  freqs$spec_id = NULL
   freqs$samp_id = NULL
   setDF(freqs)
 
@@ -63,19 +64,23 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   tfs$time_id = NULL
   setcolorder(tfs, c("species", "time", "tf", "se", "jtot", "sptot", "esttot"))
   setDF(tfs)
-  out = list(freqs = freqs, tfs = tfs)
+  out = list(freqs = freqs, tfs = tfs, sites = sites, species = species, times = times, excluded_sites = exclude_sites)
   class(out) = "frescalo"
   out
 }
 
 frequencies = function(object) {
+  # freqs = object$freqs # Results in additional copy of large table.
+  #freqs$spec_id = NULL
+  #freqs$samp_id = NULL
+  #setDF(freqs)
   object$freqs
 }
 
 timefactors = function(object) {
-  if (is.null(object$tfs)) {
+  #if (is.null(object$tfs)) {
     #tfalc....
-  }
+  #}
   object$tfs
 }
 

@@ -1,5 +1,3 @@
-source("R/frequencies.r")
-source("R/fresca.r")
 
 library(data.table)
 setDTthreads(threads = 1)

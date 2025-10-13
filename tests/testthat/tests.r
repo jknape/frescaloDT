@@ -1,41 +1,61 @@
-freqs_fortran = read.table("freqs.txt", header = TRUE)
+# Compare against fortran output on Test.txt
+library(data.table)
+
+freqs_fortran = read.table("testdata/freqs.txt", header = TRUE)
+setDT(freqs_fortran)
+
+weights = fread("testdata/weights.txt")
+weights = weights[,1:3]
+setnames(weights, c("samp", "samp1", "wgt"))
+
+data = fread("testdata/Test.txt")
+
+fr = frescalo(data, weights)
 
 # Fortran program is truncating frequencies at 5e-5
-nrow(freqs)
-nrow(freqs_fortran)
-max(abs(freqs[freq > 5e-5][,freq] - freqs_fortran[,"Freq__"]))
-
-identical(freqs[freq > 5e-5][,freq],freqs_fortran[,"Species"]) # Some rankings not identical due to numerical difference
+freqs = frequencies(fr)
+setDT(freqs)
 
 
-plot(sort(ffij[1,], decreasing = TRUE), type = "l", col = adjustcolor("black", alpha = .1))
-for (i in 2:nrow(ffij))
-  points(sort(ffij[i,], decreasing = TRUE), type = "l", col = adjustcolor("black", alpha = .1))
+comp_frq = freqs[freqs_fortran, on = c("samp" = "Location", "species" = "Species")]
+
+
+expect_lt(max(abs(comp_frq$freq - comp_frq$Freq__)), 1e-4)
+expect_lt(max(abs(comp_frq$Freq_1 - comp_frq$i.Freq_1)), 1e-4)
+expect_lt(max(abs(comp_frq$SD_Frq1 - comp_frq$i.SD_Frq1)), 1e-4)
+expect_lt(max(abs(comp_frq$rank - comp_frq$Rank)), 3)
+expect_lt(max(abs(comp_frq$rank1 - comp_frq$Rank_1)), .02)
+
+
+# Time factors
+
+tfs_fortran = read.table("testdata/trends.txt", header = TRUE)
+setDT(tfs_fortran)
+tfs = timefactors(fr)
+setDT(tfs)
+
+comp_tfs = tfs[tfs_fortran, on = c("time" = "Time______", "species" = "Species__")]
+
+# The fortran printing statement f7.3 cannot print tf > 10000, these are therefore ****** -> NA in the fortran version.
+na_ind = which(is.na(comp_tfs$TFactor))
+expect_gt(min(comp_tfs[na_ind]$tf) , 10000)
+expect_gt(min(comp_tfs[na_ind]$se) , 10000)
 
 
 
-
-# TFcalc
-#setorder(fre, Samp, -Freq)
-# Verify against fortran
-# fre = fre[fre$Freq > 5e-5, ]
-# max(abs(fre$Freq - freqs_fortran$Freq__))
-# max(abs(fre$Freq_1 - freqs_fortran$Freq_1))
-# max(abs(fre$SD_Frq1 - freqs_fortran$SD_Frq1))
-# max(abs(fre$rank - freqs_fortran$Rank))
-# max(abs(fre$rank1 - freqs_fortran$Rank_1))
+comp_tfs = comp_tfs[-na_ind]
 
 
+na_ind = which(is.na(comp_tfs$St_Dev))
+expect_lt(comp_tfs$tf[na_ind] / comp_tfs$se[na_ind], .02)
 
+comp_tfs = comp_tfs[-na_ind]
 
-tfs_fortran = read.table("trends.txt", header = TRUE)
+expect_lt(max(abs(comp_tfs$tf - comp_tfs$TFactor)), .01)
+expect_lt(max(abs(comp_tfs$se - comp_tfs$St_Dev)), .02)
+expect_equal(max(abs(comp_tfs$jtot - comp_tfs$X_Count)), 0)
+expect_lt(max(abs(comp_tfs$sptot - comp_tfs$X___spt)), .1)
+expect_equal(max(abs(comp_tfs$ic1 - comp_tfs$N.0.00)), 0)
+expect_equal(max(abs(comp_tfs$ic2 - comp_tfs$N.0.98)), 0)
+expect_lt(max(abs(comp_tfs$esttot - comp_tfs$X___est)), .1)
 
-plot(tfs_fortran$TFactor[is.finite(tfs_fortran$TFactor)], tfs$tf[is.finite(tfs_fortran$TFactor)])
-tfdiffs = which(abs(tfs_fortran$TFactor - tfs$tf) >.005)
-cbind(tfs[tfdiffs], tfs_fortran[tfdiffs, ])
-
-max(abs(tfs_fortran$TFactor - tfs$tf), na.rm = TRUE)
-
-# Note: The fortran printing statement f7.3 cannot print tf > 10000, these are therefore ****** in the trends file.
-tfdiffs = which(tfs$tf > max(tfs_fortran$TFactor, na.rm = TRUE))
-cbind(tfs[tfdiffs], tfs_fortran[tfdiffs, ])
