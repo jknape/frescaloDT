@@ -13,6 +13,8 @@ setnames(weights, c("samp", "samp1", "wgt"))
 #data = read.table("../input/occ.txt")
 data = fread("tests/testthat/testdata/Test.txt")
 
+frescalo(data, weights)
+
 #######################################
 # Format data
 #######################################

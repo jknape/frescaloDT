@@ -1,3 +1,4 @@
+# Temporary function, should not be needed later.
 fwf = function(data, weights, return_type = "dt") {
   setDT(data)
   setnames(data, c("samp", "spec", "time"))
@@ -37,7 +38,7 @@ fwf0 = function(data, weights, sites, species, return_type = "dt") {
 
   # L254
   #swgt = weights[, .(wgttot = sum(wgt), wgt2 = sum(wgt^2)),by = samp]
-  swgt = weights[, .(wgttot = sum(wgt), wgt2 = sum(wgt^2)),by = samp_id]
+  swgt = weights[, .(wgttot = sum(wgt), wgt2 = sum(wgt^2)), by = samp_id]
   setorder(swgt, samp_id)
 
   set(sites, j = "wn2", value = swgt$wgttot^2 / (swgt$wgt2 + 1e-12)) # Save for computation in fresca
@@ -85,8 +86,12 @@ fwf0 = function(data, weights, sites, species, return_type = "dt") {
       return(ffij)
   }
   freqs = data.table(samp_id = rep(1:nrow(ffij), ncol(ffij)), spec_id = rep(1:ncol(ffij), each = nrow(ffij)), freq = as.vector(ffij), pres = 0L)
-  pind = do.call(c, mapply(function(l,i) {l + (i-1L)*ncol(ffij)} , occ_ind, 1:nrow(ffij)))
-  set(freqs, i = pind, j = "pres", 1L)
+  browser()
+  pind = do.call(c, mapply(function(l,i) {l + (i-1L)*ncol(ffij)} , occ_ind, 1:nrow(ffij))) # Not correct
+  pind2 = do.call(c, mapply(function(l,i) {i + (l-1L)*nrow(ffij)} , occ_ind, 1:nrow(ffij)))
+
+  stopifnot(identical(freqs[samp_id == 1 & pres]$spec_id, occ_ind[[1]]))
+  set(freqs, i = pind2, j = "pres", 1L)
   freqs
 }
 

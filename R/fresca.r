@@ -1,4 +1,5 @@
-frescaDT2 = function(dat, sites, phibig = .74, irepmax = 100, fmax=0.99999, fmin=1.0E-10,tol=0.0003) {
+# Note: info is added to 'sites' as side effect.
+frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 100, fmax=0.99999, fmin=1.0E-10,tol=0.0003) {
   f = dat$freq
   sa_id = dat$samp_id[1]
   wn2 = sites$wn2[sa_id]
@@ -17,16 +18,16 @@ frescaDT2 = function(dat, sites, phibig = .74, irepmax = 100, fmax=0.99999, fmin
     an2 = tot^2 / tot2
     spnum = tot
     if (i < 20) {
-      alpha = alpha * exp(1.86 * (log(1-phi) - log(1-phibig)))
+      alpha = alpha * exp(1.86 * (log(1-phi) - log(1-phi_target)))
     } else {
-      alpha = alpha * phibig / phi
+      alpha = alpha * phi_target / phi
     }
     if(i == 1) {
       phi0=phi
       an21=an2
       spnum0=tot
     }
-    if(abs(phi-phibig) < tol) {
+    if(abs(phi-phi_target) < tol) {
       conv = TRUE
     }
     i = i + 1
@@ -51,7 +52,7 @@ frescaDT2 = function(dat, sites, phibig = .74, irepmax = 100, fmax=0.99999, fmin
 }
 
 
-fresca.DT = function(dat, row_ind, f, wn2, phibig = .74, irepmax = 100, fmax=0.99999, fmin=1.0E-10,tol=0.0003) {
+fresca.DT = function(dat, row_ind, f, wn2, phi_target = .74, irepmax = 100, fmax=0.99999, fmin=1.0E-10,tol=0.0003) {
   ns = length(f)
   alpha = 1
   conv = FALSE
@@ -68,16 +69,16 @@ fresca.DT = function(dat, row_ind, f, wn2, phibig = .74, irepmax = 100, fmax=0.9
     an2 = tot^2 / tot2
     spnum = tot
     if (i < 20) {
-      alpha = alpha * exp(1.86 * (log(1-phi) - log(1-phibig)))
+      alpha = alpha * exp(1.86 * (log(1-phi) - log(1-phi_target)))
     } else {
-      alpha = alpha * phibig / phi
+      alpha = alpha * phi_target / phi
     }
     if(i == 1) {
       phi0=phi
       an21=an2
       spnum0=tot
     }
-    if(abs(phi-phibig) < tol) {
+    if(abs(phi-phi_target) < tol) {
       conv = TRUE
     }
     i = i + 1

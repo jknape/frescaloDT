@@ -1,4 +1,4 @@
-tfcalc = function(data, freqs, species, sites, Rstar = .27, no_bench = NULL) {
+tfcalc = function(data, freqs, species, sites, times, Rstar = .27, no_bench = NULL) {
   Rstar = .27
 
   no_bench = ""
