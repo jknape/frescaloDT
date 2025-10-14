@@ -1,26 +1,25 @@
 tfcalc = function(data, freqs, species, sites, times, Rstar = .27, no_bench = NULL) {
-  Rstar = .27
-
+  samp_id = spec_id = time_id = rank1 = bench = nbench = Freq_1 = bwght = spec = NULL # To avoid Notes in R CMD check
   no_bench = ""
   species[, bwght := 1]
   species[spec %in% no_bench, bwght := .001]
 
-  sampeff = species[freqs, .(samp_id, spec_id, bench = bwght * (rank1 < Rstar | rank == 1)), on = "spec_id"][, nbench := sum(bench), by = "samp_id"]
+  sampeff = species[freqs, list(samp_id, spec_id, bench = bwght * (rank1 < Rstar | rank == 1)), on = "spec_id"][, nbench := sum(bench), by = "samp_id"]
 
-  sampeff = sampeff[data, .(samp_id, spec_id, time_id, bench, nbench), on = c("samp_id", "spec_id")][, .(samp_eff = sum(bench)/nbench[1]), by = .(samp_id, time_id)]
+  sampeff = sampeff[data, list(samp_id, spec_id, time_id, bench, nbench), on = c("samp_id", "spec_id")][, list(samp_eff = sum(bench)/nbench[1]), by = list(samp_id, time_id)]
 
 
-  sampeff = dcast(sampeff, samp_id ~ time_id, value.var = "samp_eff", fill = 0)[sites[,.(samp_id)], on = "samp_id"]
+  sampeff = dcast(sampeff, samp_id ~ time_id, value.var = "samp_eff", fill = 0)[sites[,list(samp_id)], on = "samp_id"]
 
   iocc = data.table(spec_id = rep(species$spec_id, each = nrow(times)), time_id = rep(times$time_id, nrow(species)))
-  iocc0 = data[, .(occ = list(samp_id)), by = .(spec_id, time_id)]
-  iocc = iocc0[iocc, on = .(spec_id, time_id)]
+  iocc0 = data[, list(occ = list(samp_id)), by = list(spec_id, time_id)]
+  iocc = iocc0[iocc, on = list(spec_id, time_id)]
   setorder(iocc, spec_id, time_id)
 
   jind = iocc$spec_id
   tind = iocc$time_id
   iocc = iocc$occ
-  fffl = freqs[order(spec_id), .(list(Freq_1)), by = spec_id]$V1
+  fffl = freqs[order(spec_id), list(list(Freq_1)), by = spec_id]$V1
 
   ntf = length(jind)
   tfs = data.table(spec_id = jind, time_id = tind, tf = numeric(ntf), se = numeric(ntf),

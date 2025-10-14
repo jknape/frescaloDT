@@ -13,6 +13,8 @@ data = fread("tests/testthat/testdata/Test.txt")
 
 frescalo(data, weights)
 
+frescalo(data, weights, phi_target = 1.01)
+
 #######################################
 # Format data
 #######################################
