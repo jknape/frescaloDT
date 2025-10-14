@@ -59,3 +59,11 @@ expect_equal(max(abs(comp_tfs$ic1 - comp_tfs$N.0.00)), 0)
 expect_equal(max(abs(comp_tfs$ic2 - comp_tfs$N.0.98)), 0)
 expect_lt(max(abs(comp_tfs$esttot - comp_tfs$X___est)), .1)
 
+# TODO: check against output in stats file
+
+
+# TODO: check what happens when there are duplicate records in input
+
+fr = frescalo(data[c(1, 1:nrow(data))], weights)
+
+# TODO: check varying names of input columns

@@ -36,7 +36,8 @@ frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 100, fmax=0.99999, 
     warning("fresca failed to converge")
   }
   ffrs = 1-exp(alpha*log(1-f))
-  set(sites, i = sa_id, j = c("alpha", "spnum", "phi0", "spnum0", "iter.fresca", "conv.fresca"), value = list(alpha, "spnum", phi0, spnum0, i, conv)) # Could preallocate, but not necessary?
+  set(sites, i = sa_id, j = c("alpha", "phi_orig", "phi_new", "spnum_orig", "spnum_new", "iter.fresca", "conv.fresca"),
+      value =            list(alpha,         phi0,       phi,       spnum0,       spnum,             i,          conv)) # Could preallocate, but not necessary?
   # All of below could be done later, depends only on f, spnum and alpha.
   jrank = order(-f + 1:length(f) * 1e-12)
   ffrs = 1-exp(alpha*log(1-f))

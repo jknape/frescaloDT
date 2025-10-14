@@ -17,6 +17,8 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
 
   setDT(data)
   setnames(data, c("samp", "spec", "time"))
+
+  setDT(weights)
   weights = weights[,1:3]
   setnames(weights, c("samp", "samp1", "wgt"))
 
@@ -62,7 +64,7 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
       value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank1 = R´, Hill P200.
   setkey(freqs, samp_id) # Not needed, minimal improvement if any?
 
-  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target), keyby = list(samp_id), .SDcols = c("samp_id", "freq")]
+  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 500), keyby = list(samp_id), .SDcols = c("samp_id", "freq")]
 
   tfs = tfcalc(data, freqs, species, sites, times, Rstar = Rstar, no_bench = bench_exclude)
 
@@ -78,8 +80,10 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   tfs$time_id = NULL
   setcolorder(tfs, c("species", "time", "tf", "se", "jtot", "sptot", "esttot"))
   setDF(tfs)
-  out = list(freqs = freqs, tfs = tfs, sites = sites, species = species, times = times, excluded_sites = exclude_sites, phi_target = phi_target, Rstar = Rstar)
+  out = list(freqs = freqs, tfs = tfs, sites = sites, species = species, times = times,
+             excluded_sites = exclude_sites, phi_target = phi_target, Rstar = Rstar)
   class(out) = "frescalo"
+  check_phi(out)
   out
 }
 
@@ -97,4 +101,39 @@ timefactors = function(object) {
   #}
   object$tfs
 }
+
+check_phi = function(object, prob = .985, plot = FALSE) {
+  obs_p = stats::quantile(object$sites$phi_orig, probs = prob)
+  phi_ok = obs_p < object$phi_target
+  message(paste0(round(100 * prob, 1), " percentile of input phi = ", round(obs_p,2), "\n",
+                "Target phi = ", round(object$phi_target, 2)))
+  if (!phi_ok) {
+    warning("Target value of phi may be too small.")
+  }
+  if (plot) {
+    graphics::hist(object$sites$phi_orig, xlim = c(0, 1), xlab = "phi", main = "")
+    graphics::abline(v = object$phi_target, col = "red")
+  }
+  if (!all(object$sites$conv.fresca) & plot) {
+    graphics::plot(object$sites$phi_orig, object$sites$phi_new, xlim = c(0, 1), xlab = "phi in", ylab = "phi out", main = "")
+    conv_fail = !object$sites$conv.fresca
+    graphics::abline(h = object$phi_target, col = "green")
+    graphics::points(object$sites$phi_orig[conv_fail], object$sites$phi_new[conv_fail], col = "red", pch = 19)
+  }
+  phi_ok
+}
+
+# Is this meaningful?
+check_r = function(object) {
+  graphics::hist(object$freqs$rank1, xlab = "R", main = "")
+  graphics::abline(v = object$Rstar, col = "red")
+}
+
+#check_rescaling = function(object) {
+#  op = par()
+#  par(mfcol = c(1,2))
+#  graphics::hist(object$freqs$rank1, xlab = "R", main = "")
+#  graphics::abline(v = object$Rstar, col = "red")
+#}
+
 
