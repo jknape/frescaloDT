@@ -15,6 +15,10 @@
 #' @importFrom data.table setorder
 #' @importFrom data.table setcolorder
 #' @importFrom data.table dcast
+#' @importFrom ggplot2 ggplot
+#' @importFrom ggplot2 aes
+#' @importFrom ggplot2 .data
+#' @importFrom ggplot2 geom_line
+#' @importFrom ggplot2 facet_wrap
 ## usethis namespace: end
 NULL
-de

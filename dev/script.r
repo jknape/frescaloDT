@@ -17,6 +17,15 @@ check_phi(fr)
 
 frescalo(data, weights, phi_target = 1.01)
 
+# Try recreating Fig 4 in Hill
+fr = frescalo(data, weights)
+freq = frequencies(fr)
+setDT(freq)
+pldat = freq[pres == 1, .(mf = mean(freq), mfr = mean(Freq_1)),by = list(samp)][fr$sites, on = "samp"]
+with(pldat, plot(n_spec / spnum_new, mfr))
+with(pldat, points(n_spec / spnum_new, mf, col = "red"))
+
+
 #######################################
 # Format data
 #######################################

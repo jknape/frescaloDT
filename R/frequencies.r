@@ -17,6 +17,7 @@ nfcalc = function(data, weights, sites, species, return_type = "dt") {
   occ = data[, list(occ_ind = list(unique(spec_id))), by = samp_id]
   occ = occ[sites, on = c("samp_id")]
 
+  set(sites, j = "n_spec", value = sapply(occ$occ_ind, length))
 
   stopifnot(identical(sites$samp_id, occ$samp_id))
 

@@ -23,7 +23,7 @@ tfcalc = function(data, freqs, species, sites, times, Rstar = .27, no_bench = NU
 
   ntf = length(jind)
   tfs = data.table(spec_id = jind, time_id = tind, tf = numeric(ntf), se = numeric(ntf),
-                   jtot = integer(ntf), sptot = numeric(ntf), esttot = numeric(ntf), ic1 = integer(ntf), ic2 = integer(ntf), conv = logical(ntf))
+                   jtot = integer(ntf), sptot = numeric(ntf), esttot = numeric(ntf), ic1 = integer(ntf), ic2 = integer(ntf), iter_tf = integer(ntf), iter_tf_se = integer(ntf),  conv = logical(ntf))
 
   for (l in 1:length(jind)) {
     fff = fffl[[jind[l]]]
@@ -31,10 +31,11 @@ tfcalc = function(data, freqs, species, sites, times, Rstar = .27, no_bench = NU
     smpint[smpint == 0] = 1e-7 # ~ L37
     smpint[is.na(smpint)] = 1e-7 # ~ L37
     if (length(iocc[[l]]) < 1) {
-      set(tfs, l, c("tf", "se", "jtot", "sptot", "esttot", "ic1", "ic2", "conv"),
-          list(0,0, length(iocc[[l]]), 0, 0,0,0, TRUE))
+      set(tfs, l, c("tf", "se", "jtot", "sptot", "esttot", "ic1", "ic2", "iter_tf", "iter_tf_se", "conv"),
+          list(0,0, length(iocc[[l]]), 0, 0,0,0, 0, 0, TRUE))
     } else {
-      set(tfs, l, c("tf", "se", "jtot", "sptot", "esttot", "ic1", "ic2", "conv"),
+      #browser()
+      set(tfs, l, c("tf", "se", "jtot", "sptot", "esttot", "ic1", "ic2",  "iter_tf", "iter_tf_se",  "conv"),
           tfcalc0(iocc[[l]], smpint, fff))
     }
   }
@@ -56,8 +57,6 @@ tfcalc0 = function(iocc, smpint, fff, kmax = 100) {
   tf = 1
   conv = FALSE
   k = 1
-  mrel = 0
-  iflag = 0
   while(k <= kmax & !conv) {
     estval = 1 - exp(-plog * tf)
     esttot = sum(wgt * estval)
@@ -71,9 +70,9 @@ tfcalc0 = function(iocc, smpint, fff, kmax = 100) {
   }
   tf1=tf
   sptot1 = sptot + sqrt(estvar)
-  k = 1
+  k2 = 1
   conv2 = FALSE
-  while(k <= kmax & !conv2) {
+  while(k2 <= kmax & !conv2) {
     estval = 1 - exp(-plog * tf1)
     esttt1 = sum(wgt*estval)
     if(abs(sptot1 - esttt1) < 0.0005) {
@@ -81,11 +80,31 @@ tfcalc0 = function(iocc, smpint, fff, kmax = 100) {
     } else {
       tf1 = tf1 * sptot1 / (esttt1 + 0.0000001)
     }
-    k = k + 1
+    k2 = k2 + 1
   }
-  list(tf = tf, se = tf1 - tf, jtot = jtot, sptot = sptot, esttot = esttot, ic1 = ic1, ic2 = ic2, conv = conv)
+  list(tf = tf, se = tf1 - tf, jtot = jtot, sptot = sptot, esttot = esttot, ic1 = ic1, ic2 = ic2, iter_tf1 = k, iter_tf_se = k2, conv = conv)
 }
 
+# Seems not much faster, maybe a little gain in memory allocation.
+tfcalc0_Rcpp = function(iocc, smpint, fff, kmax = 100) {
+  wgt = rep(1, length(smpint))
+  iw = which(smpint < .0995)
+  wgt[iw] = 0.005  + 10 * smpint[iw]
+  pfac = smpint * fff
+  ic1 = sum(pfac > 0)
+  ipf = which(pfac > .98)
+  pfac[ipf] = 0.98
+  ic2 = length(ipf)
+  plog = -log(1 - pfac)
+  sptot = sum(wgt[iocc])
+  jtot = length(iocc)
+  tf = 1
 
+  res1 = tf_iter(tf, wgt,plog,sptot)
 
+  sptot1 = sptot + sqrt(res1[3])
 
+  res2 = tf_iter(res1[1], wgt, plog, sptot1)
+
+  list(tf = res1[1], se = res2[1] - res1[1], jtot = jtot, sptot = sptot, esttot = res1[2], ic1 = ic1, ic2 = ic2, iter_tf1 = res1[4], iter_tf_se = res2[4], conv = res1[4] < kmax)
+}

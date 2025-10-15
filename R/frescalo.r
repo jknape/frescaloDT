@@ -64,7 +64,7 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
       value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank1 = R´, Hill P200.
   setkey(freqs, samp_id) # Not needed, minimal improvement if any?
 
-  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 500), keyby = list(samp_id), .SDcols = c("samp_id", "freq")]
+  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(samp_id), .SDcols = c("samp_id", "freq")]
 
   tfs = tfcalc(data, freqs, species, sites, times, Rstar = Rstar, no_bench = bench_exclude)
 
@@ -114,14 +114,14 @@ check_phi = function(object, prob = .985, plot = FALSE) {
     graphics::hist(object$sites$phi_orig, xlim = c(0, 1), xlab = "phi", main = "")
     graphics::abline(v = object$phi_target, col = "red")
   }
-  if (!all(object$sites$conv.fresca) & plot) {
-    graphics::plot(object$sites$phi_orig, object$sites$phi_new, xlim = c(0, 1), xlab = "phi in", ylab = "phi out", main = "")
+  if (!all(object$sites$conv.fresca)) {
     conv_fail = !object$sites$conv.fresca
-    graphics::abline(h = object$phi_target, col = "green")
-    graphics::points(object$sites$phi_orig[conv_fail], object$sites$phi_new[conv_fail], col = "red", pch = 19)
+    warning(paste("phi did not converge to phi_target for all sites, increasing max.iter might help. Convergence failed for site(s):",
+                  paste(object$sites$samp[conv_fail], collapse = ", ")))
   }
   phi_ok
 }
+
 
 # Is this meaningful?
 check_r = function(object) {
@@ -135,5 +135,28 @@ check_r = function(object) {
 #  graphics::hist(object$freqs$rank1, xlab = "R", main = "")
 #  graphics::abline(v = object$Rstar, col = "red")
 #}
+
+
+# ~ Fig 2 & 3 in Hill
+check_rescaling = function(object, max_sites = 500) {
+  scaled = NULL
+  if (nrow(object$sites) > max_sites) {
+    keep = object$freqs[["samp"]] %in% sample(object$sites[["samp"]], max_sites)
+  } else {
+    keep = TRUE
+  }
+  pldat = object$freqs[keep, c("samp", "rank", "rank1", "freq", "Freq_1")]
+  setDT(pldat)
+  pldat[, rank := as.numeric(rank)]
+  pldat = data.table::melt(pldat,
+                           id.vars = "samp", measure.vars = list(freq = c("freq", "Freq_1"), rank = c("rank", "rank1")),
+                           variable.name = "scaled", variable.factor = FALSE)
+  pldat[, scaled := c("unscaled", "rescaled")[as.integer(scaled)]]
+  ggplot(data = pldat, aes(x = .data[["rank"]], y = .data[["freq"]], group = .data[["samp"]])) +
+    geom_line(alpha = 100/min(nrow(object$sites), max_sites)) + facet_wrap("scaled", scales = "free_x")
+
+}
+
+
 
 
