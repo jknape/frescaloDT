@@ -4,18 +4,25 @@
 #'             Second column the observed species, and third column the time of observation.
 #' @param weights Data frame with neighbourhood weights where the first column is the target site, second column is the
 #'                neighbour, and third column is the weight in the neigbourhood of the target site.
-#' @param phi_target Target value for adjusted frequency weighted mean frequencies.
+#' @param phi_target Target value for adjusted frequency weighted mean frequencies. The default value, 0.74, follows the default of Hill,
+#'                   but is arbitrary.
 #' @param Rstar Threshold for species to be considered as benchmarks when computing time factors.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
 #'
+
 #' @returns An object of class frescalo
 #' @export
+#'
+#' The implentation uses similar conventions to the original fortran program. E.g. small constants are added in strategic places
+#' to avoid divisions by zero or other issues that can cause the algorithm to otherwise fail.
+#'
 #'
 #' @examples
 frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude = NULL) {
   samp_id = samp = spec_id = time_id = samp1_id = NULL # To avoid Notes in R CMD check
 
-  setDT(data)
+  # data = complete.cases(data[, ])
+  setDT(data) # Should copy, otherwise may be reordered on return!
   setnames(data, c("samp", "spec", "time"))
 
   setDT(weights)
@@ -157,6 +164,23 @@ check_rescaling = function(object, max_sites = 500) {
 
 }
 
+# Estimated probability of occurence under standard effort, sit = 1 meaning all benchmarks found (Bijlsma). Note that this depends on the proportion of benchmarks (see Prescott 2025).
+# Note: this is rather probability of detection under a sampling effort sufficient for all benchmarks to be found(?)
+# Also assumes identical trends across all sites...
+# Computed for a subset of species to avoid huge output.
+prob_occ = function(object, spec, s = 1) {
+  setDT(fr$freqs)
+  setDT(fr$tfs)
+  out = merge(object$freqs[species %in% spec, list(species, samp, Freq_1)],
+                          object$tfs[species %in% spec, list(species, time, tf)], allow.cartesian = TRUE)
+  out[, p_occ := 1 - (1-s * Freq_1)^tf]
+  out$tf = NULL
+  out$Freq_1 = NULL
+  setDF(fr$freqs)
+  setDF(fr$tfs)
+  setDF(out)
+  out
+}
 
 
 
