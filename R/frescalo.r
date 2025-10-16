@@ -1,15 +1,17 @@
 #' Analyse species occurrence data with the frescalo algorithm of Hill 2012.
 #'
-#' @param data Data frame with the samples. First column should contain the name or id of the sampled site.
-#'             Second column the observed species, and third column the time of observation.
+#' @param data Data frame with the samples. By default, first column is interpreted as the name or id of the sampled site,
+#'             the second column as the observed species, and the third column the time of observation. This can be changed
+#'             via tha colnames argument.
 #' @param weights Data frame with neighbourhood weights where the first column is the target site, second column is the
 #'                neighbour, and third column is the weight in the neigbourhood of the target site.
 #' @param phi_target Target value for adjusted frequency weighted mean frequencies. The default value, 0.74, follows the default of Hill,
 #'                   but is arbitrary.
 #' @param Rstar Threshold for species to be considered as benchmarks when computing time factors.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
+#' @param colnames A list with elements named location, species, time, location2 and weigth and values equal to the corresponding
+#'                 column names in data and weight. Defaults to NULL in which the order of the columns is used.
 #'
-
 #' @returns An object of class frescalo
 #' @export
 #'
@@ -18,17 +20,20 @@
 #'
 #'
 #' @examples
-frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude = NULL) {
+frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude = NULL, colnames = NULL) {
   samp_id = samp = spec_id = time_id = samp1_id = NULL # To avoid Notes in R CMD check
 
-  # data = complete.cases(data[, ])
-  setDT(data) # Should copy, otherwise may be reordered on return!
-  setnames(data, c("samp", "spec", "time"))
+  if (is.null(colnames)) {
+    data = data[,1:3]
+    data_names = colnames(data)
+    setDT(data) # Should copy, otherwise may be reordered on return!
+    setnames(data, c("samp", "spec", "time"))
 
-  setDT(weights)
-  weights = weights[,1:3]
-  setnames(weights, c("samp", "samp1", "wgt"))
-
+    weights = weights[,1:3]
+    weight_names = colnames(weights)
+    setDT(weights)
+    setnames(weights, c("samp", "samp1", "wgt"))
+  }
   stopifnot(setequal(unique(weights$samp), unique(weights$samp1))) # How handle this??
   sites = data.table(samp = sort(unique(c(weights$samp))))[, samp_id := 1:.N]
 
