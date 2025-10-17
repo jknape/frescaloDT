@@ -1,5 +1,5 @@
 # Note: info is added to 'sites' as side effect.
-frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 100, fmax=0.99999, fmin=1.0E-10,tol=0.0003) {
+frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 100, fmax=0.99999, fmin=1.0E-10, tol=0.0003) {
   f = dat$freq
   sa_id = dat$samp_id[1]
   wn2 = sites$wn2[sa_id]
@@ -11,9 +11,9 @@ frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 100, fmax=0.99999, 
   f[f < fmin] = fmin
   while (i <= irepmax & ! conv) {
     ff = -log(1-f)
-    ffn = 1 - exp(-ff  * alpha)
-    tot = sum(ffn)
-    tot2 = sum(ffn ^ 2)
+    f_rs = 1 - exp(-ff  * alpha)
+    tot = sum(f_rs)
+    tot2 = sum(f_rs ^ 2)
     phi = tot2 / tot
     an2 = tot^2 / tot2
     spnum = tot
@@ -32,24 +32,20 @@ frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 100, fmax=0.99999, 
     }
     i = i + 1
   }
-#  if (!conv) { # warnings are generated in check_phi
-#   warning("fresca failed to converge")
-#  }
-  ffrs = 1-exp(alpha*log(1-f))
+  f_rs = 1-exp(alpha*log(1-f))
   set(sites, i = sa_id, j = c("alpha", "phi_orig", "phi_new", "spnum_orig", "spnum_new", "iter.fresca", "conv.fresca"),
       value =            list(alpha,         phi0,       phi,       spnum0,       spnum,             i,          conv)) # Could preallocate, but not necessary?
   # All of below could be done later, depends only on f, spnum and alpha.
   jrank = order(-f + 1:length(f) * 1e-12)
-  ffrs = 1-exp(alpha*log(1-f))
-  sdffrs = sqrt(f * (1-f) / wn2)
-  ffff = f + sdffrs
+  sd_f_rs = sqrt(f * (1-f) / wn2)
+  ffff = f + sd_f_rs
   ffff[1-ffff < 1e-12] = 1 - 1e-12
-  fffff = f - sdffrs
+  fffff = f - sd_f_rs
   ffsd = 1 - exp(alpha * log(1 - ffff))
-  fffsd = 1 - exp(alpha * log(1 - fffff))
+  fffsd = 1 - exp(alpha * log(1 - (f - sd_f_rs)))
   sdij = 0.5 * (ffsd - fffsd)
-  ffrs[ifz] = 0 # Line 333
-  list(ffrs, sdij, order(jrank), order(jrank)/spnum)
+  f_rs[ifz] = 0 # Line 333
+  list(f_rs, sdij, order(jrank), order(jrank)/spnum)
 }
 
 
@@ -63,9 +59,9 @@ frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 100, fmax=0.99999, 
 #   f[f < fmin] = fmin
 #   while (i <= irepmax & ! conv) {
 #     ff = -log(1-f)
-#     ffn = 1 - exp(-ff  * alpha)
-#     tot = sum(ffn)
-#     tot2 = sum(ffn ^ 2)
+#     f_rs = 1 - exp(-ff  * alpha)
+#     tot = sum(f_rs)
+#     tot2 = sum(f_rs ^ 2)
 #     phi = tot2 / tot
 #     an2 = tot^2 / tot2
 #     spnum = tot
@@ -90,10 +86,10 @@ frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 100, fmax=0.99999, 
 #   # All of below could be done later, depends only on f, spnum and alpha.
 #   jrank = order(-f + 1:ns * 1e-12)
 #   ffrs = 1-exp(alpha*log(1-f))
-#   sdffrs = sqrt(f * (1-f) / wn2)
-#   ffff = f + sdffrs
+#   sd_f_rs = sqrt(f * (1-f) / wn2)
+#   ffff = f + sd_f_rs
 #   ffff[1-ffff < 1e-12] = 1 - 1e-12
-#   fffff = f - sdffrs
+#   fffff = f - sd_f_rs
 #   ffsd = 1 - exp(alpha * log(1 - ffff))
 #   fffsd = 1 - exp(alpha * log(1 - fffff))
 #   sdij = 0.5 * (ffsd - fffsd)

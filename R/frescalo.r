@@ -9,17 +9,18 @@
 #'                   but is arbitrary.
 #' @param Rstar Threshold for species to be considered as benchmarks when computing time factors.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
-#' @param colnames A list with elements named location, species, time, location2 and weigth and values equal to the corresponding
-#'                 column names in data and weight. Defaults to NULL in which the order of the columns is used.
+#' @param col_names A list with elements named location, species, time, location2 and weight and values equal to the corresponding
+#'                 column names in data and weight. Defaults to NULL in which case the order of the columns is used.
 #'
 #' @returns An object of class frescalo
-#' @export
+#'
 #'
 #' The implentation uses similar conventions to the original fortran program. E.g. small constants are added in strategic places
 #' to avoid divisions by zero or other issues that can cause the algorithm to otherwise fail.
 #'
 #'
 #' @examples
+#' @export
 frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude = NULL, col_names = NULL) {
   samp_id = samp = spec_id = time_id = samp1_id = NULL # To avoid Notes in R CMD check
 
@@ -38,7 +39,7 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
     names(col_names) = match.arg(names(col_names), expected_cols, several.ok = TRUE)
     missing_cols = setdiff(expected_cols, names(col_names))
     if (length(missing_cols)>0) {
-      stop(paste0("Name of ", missing_cols, "not found in col_names.", collapse = ","))
+      stop(paste0("Name of ", missing_cols, " not found in col_names.", collapse = ","))
     }
     pmatch(colnames(data), unlist(col_names))
     match.arg(colnames(data), col_names[[c("location", "species", "time")]])
@@ -100,7 +101,7 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   tfs$spec_id = NULL
   tfs$time = times$time[match(tfs$time_id, times$time_id)]
   tfs$time_id = NULL
-  setcolorder(tfs, c("species", "time", "tf", "se", "jtot", "sptot", "esttot"))
+  setcolorder(tfs, c("species", "time", "tf", "se", "n_obs", "sptot", "esttot"))
   setDF(tfs)
   out = list(freqs = freqs, tfs = tfs, sites = sites, species = species, times = times,
              excluded_sites = exclude_sites, phi_target = phi_target, Rstar = Rstar)
@@ -109,6 +110,16 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   out
 }
 
+
+#' Extract species frequencies from a frescalo object.
+#'
+#' @param object An object as returned from the frescalo function.
+#'
+#' @returns A data frame with species frequencies across locations.
+#'
+#'
+#' @examples
+#' @export
 frequencies = function(object) {
   # freqs = object$freqs # Results in additional copy of large table.
   #freqs$spec_id = NULL
@@ -117,6 +128,15 @@ frequencies = function(object) {
   object$freqs
 }
 
+
+#' Extract time facotrs from a frescalo object.
+#'
+#' @param object An object as returned from the frescalo function.
+#'
+#' @returns A data frame with time factors across species.
+#' @export
+#'
+#' @examples
 timefactors = function(object) {
   #if (is.null(object$tfs)) {
     #tfalc....
@@ -159,7 +179,17 @@ check_r = function(object) {
 #}
 
 
-# ~ Fig 2 & 3 in Hill
+#' Plot unscaled and rescaled neighbourhood species frequency curves.
+#'
+#' @param object An object as returned from the frescalo function.
+#' @param max_sites Maximum number of sites for which to plot curves.
+#'                  If less than the total number of sites, a random sample is taken.
+#'
+#' @returns A ggplot object.
+#'
+#' The plots correspond to Fig. 2 and 3 in Hill 2012.
+#' @examples
+#' @export
 check_rescaling = function(object, max_sites = 500) {
   scaled = NULL
   if (nrow(object$sites) > max_sites) {
