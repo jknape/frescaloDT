@@ -28,3 +28,6 @@ euclid_dist = function(data, site, lat, lon, trunc = Inf, rank = TRUE)  {
   out
 }
 
+
+
+

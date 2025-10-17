@@ -20,10 +20,10 @@
 #'
 #'
 #' @examples
-frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude = NULL, colnames = NULL) {
+frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude = NULL, col_names = NULL) {
   samp_id = samp = spec_id = time_id = samp1_id = NULL # To avoid Notes in R CMD check
 
-  if (is.null(colnames)) {
+  if (is.null(col_names)) {
     data = data[,1:3]
     data_names = colnames(data)
     setDT(data) # Should copy, otherwise may be reordered on return!
@@ -33,6 +33,16 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
     weight_names = colnames(weights)
     setDT(weights)
     setnames(weights, c("samp", "samp1", "wgt"))
+  } else {
+    expected_cols = c("location", "species", "time", "location2", "weight")
+    names(col_names) = match.arg(names(col_names), expected_cols, several.ok = TRUE)
+    missing_cols = setdiff(expected_cols, names(col_names))
+    if (length(missing_cols)>0) {
+      stop(paste0("Name of ", missing_cols, "not found in col_names.", collapse = ","))
+    }
+    pmatch(colnames(data), unlist(col_names))
+    match.arg(colnames(data), col_names[[c("location", "species", "time")]])
+    browser()
   }
   stopifnot(setequal(unique(weights$samp), unique(weights$samp1))) # How handle this??
   sites = data.table(samp = sort(unique(c(weights$samp))))[, samp_id := 1:.N]
