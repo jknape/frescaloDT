@@ -39,11 +39,20 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
     names(col_names) = match.arg(names(col_names), expected_cols, several.ok = TRUE)
     missing_cols = setdiff(expected_cols, names(col_names))
     if (length(missing_cols)>0) {
-      stop(paste0("Name of ", missing_cols, " not found in col_names.", collapse = ","))
+      stop(paste0("Name of ", paste0(missing_cols, collapse = ", "), " not found in col_names."))
     }
-    pmatch(colnames(data), unlist(col_names))
-    match.arg(colnames(data), col_names[[c("location", "species", "time")]])
+    data_names = match.arg(colnames(data), unlist(col_names[c("location", "species", "time")]), several.ok = TRUE)
+    if (length(data_names) != 3 ) {
+      missing_cols = setdiff(expected_cols[1:3], names(data_names))
+      stop(paste0("Column(s) ", paste0(col_names[missing_cols], collapse = ", "), " not found data."))
+    }
+    weight_names = match.arg(colnames(data), unlist(col_names[c("location", "location2", "weight")]), several.ok = TRUE)
+    if (length(weight_names) != 3 ) {
+      missing_cols = setdiff(expected_cols[c(1,4:5)], names(weight_names))
+      stop(paste0("Column(s) ", paste0(col_names[missing_cols], collapse = ", "), " not found weights."))
+    }
     browser()
+    data = data[, c(data_names)]
   }
   stopifnot(setequal(unique(weights$samp), unique(weights$samp1))) # How handle this??
   sites = data.table(samp = sort(unique(c(weights$samp))))[, samp_id := 1:.N]
