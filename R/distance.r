@@ -40,11 +40,14 @@ similarity = function(data, site, species) {
   if (!isDT) {
     setDF(data)
   }
+  #dists = apply(data, 1, function(row) {neigh_sorensen});
 }
 
-neigh_sim = function(x, l) {
-  m = matrix(nrow = length(x), ncol = length(l))
-
+neigh_sorensen = function(x, l) {
+  #inters = lapply(l, intersect, x = x)
+  #lapply(l, match, table = x, nomatch = 0)
+  inters = sapply(lapply(l, match, table = x, nomatch = 0), function(x) {sum(x>0)})
+  1 - 2 * inters / (length(x) + sapply(l, length))
 }
 
 
