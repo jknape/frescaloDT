@@ -6,7 +6,7 @@
 #' @param weights Data frame with neighbourhood weights where the first column is the target site, second column is the
 #'                neighbour, and third column is the weight in the neigbourhood of the target site.
 #' @param phi_target Target value for adjusted frequency weighted mean frequencies. The default value, 0.74, follows the default of Hill,
-#'                   but is arbitrary.
+#'                   but is arbitrary. If NA, target is choosen as the 98.5% quantile of the empirical (unscaled) neighborhood mean frequencies.
 #' @param Rstar Threshold for species to be considered as benchmarks when computing time factors.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
 #' @param col_names A list with elements named location, species, time, location2 and weight and values equal to the corresponding
@@ -58,11 +58,13 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   sites = data.table(samp = sort(unique(c(weights$samp))))[, samp_id := 1:.N]
 
   # Argument checking
-  if (phi_target > 1) {
-    stop("Argument phi_target needs to be less than 1.")
-  }
-  if (phi_target < 0) {
-    stop("Argument phi_target needs to be positive.")
+  if (!is.na(phi_target)) {
+    if (phi_target > 1) {
+      stop("Argument phi_target needs to be less than 1.")
+    }
+    if (phi_target < 0) {
+      stop("Argument phi_target needs to be positive.")
+    }
   }
 
   if (Rstar < 0) {
@@ -91,8 +93,11 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
 
   # Compute frequency weighted mean frequencies
   freqs = nfcalc(data, weights, sites, species)
+  if (is.na(phi_target)) {
+    phi_target = freqs[ , .(phi0 = sum(freq^2)/sum(freq)), by = "samp_id"][, quantile(phi0, prob = .985, names = FALSE)]
+  }
   nc = nrow(freqs)
-  set(freqs, j = c("Freq_1", "SD_Frq1", "rank", "rank1") ,
+  set(freqs, j = c("Freq_1", "SD_Frq1", "rank", "rank1"),
       value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank1 = R´, Hill P200.
   setkey(freqs, samp_id) # Not needed, minimal improvement if any?
 
