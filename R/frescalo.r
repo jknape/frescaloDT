@@ -6,8 +6,12 @@
 #' @param weights Data frame with neighbourhood weights where the first column is the target site, second column is the
 #'                neighbour, and third column is the weight in the neigbourhood of the target site.
 #' @param phi_target Target value for adjusted frequency weighted mean frequencies. The default value, 0.74, follows the default of Hill,
-#'                   but is arbitrary. If NA, target is choosen as the 98.5% quantile of the empirical (unscaled) neighborhood mean frequencies.
+#'                   but is arbitrary. If NA, target is set to the quantile of the empirical (unscaled) neighborhood mean frequencies determined by
+#'                   phi_prob.
 #' @param Rstar Threshold for species to be considered as benchmarks when computing time factors.
+#' @param phi_prob Used to check that the phi_target is not too low. A warning is generated if
+#'                 If phi_target is set to NA, the quantile of empirical (unscaled) neighborhood mean frequencies corresponding to phi_prob
+#'                 will be taken as the target.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
 #' @param col_names A list with elements named location, species, time, location2 and weight and values equal to the corresponding
 #'                 column names in data and weight. Defaults to NULL in which case the order of the columns is used.
@@ -16,12 +20,12 @@
 #'
 #'
 #' The implentation uses similar conventions to the original fortran program. E.g. small constants are added in strategic places
-#' to avoid divisions by zero or other issues that can cause the algorithm to otherwise fail.
+#' to avoid divisions by zero or other issues that can cause the algorithm to otherwise fail numerically.
 #'
 #'
 #' @examples
 #' @export
-frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude = NULL, col_names = NULL) {
+frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .985, bench_exclude = NULL, col_names = NULL) {
   samp_id = samp = spec_id = time_id = samp1_id = NULL # To avoid Notes in R CMD check
 
   if (is.null(col_names)) {
@@ -78,6 +82,14 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   }
   data =  data[!(samp %in% exclude_sites)]
 
+  if (length(bench_exclude) > 0) {
+    bm = match(bench_exclude, species$spec, nomatch = 0)
+    if (sum(bm == 0) > 0) {
+      writeLines(paste("Species", paste(bench_exclude[bm == 0], collapse = ", "), "to exclude from benchmarks not found, ignored."))
+    }
+    bench_exclude = bench_exclude[bm > 0]
+  }
+
   # Key tables for species and times
   species = data.table(spec = sort(unique(data$spec)))[, spec_id := 1:.N] # Note: species may have been removed, if only present in excluded sites.
   times = data.table(time = sort(unique(data$time)))[, time_id := 1:.N]
@@ -94,16 +106,20 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   # Compute frequency weighted mean frequencies
   freqs = nfcalc(data, weights, sites, species)
   if (is.na(phi_target)) {
-    phi_target = freqs[ , .(phi0 = sum(freq^2)/sum(freq)), by = "samp_id"][, quantile(phi0, prob = .985, names = FALSE)]
+    phi_target = freqs[ , .(phi0 = sum(freq^2)/sum(freq)), by = "samp_id"][, quantile(phi0, prob = phi_prob, names = FALSE)]
   }
   nc = nrow(freqs)
   set(freqs, j = c("Freq_1", "SD_Frq1", "rank", "rank1"),
       value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank1 = R´, Hill P200.
   setkey(freqs, samp_id) # Not needed, minimal improvement if any?
 
-  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 500), keyby = list(samp_id), .SDcols = c("samp_id", "freq")]
+  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(samp_id), .SDcols = c("samp_id", "freq")]
 
-  tfs = tfcalc(data, freqs, species, sites, times, Rstar = Rstar, no_bench = bench_exclude)
+  # Compute effort per site and time as proportion of benchmarks found.
+  sampling_effort = benchmark_proportions(data, freqs, species, Rstar = Rstar, bench_exclude = bench_exclude)
+
+  # Compute time factors.
+  tfs = tfcalc(data, freqs, species, sites, times, sampling_effort)
 
   freqs$species = species$spec[match(freqs$spec_id, species$spec_id)]
   freqs$samp = sites$samp[match(freqs$samp_id, sites$samp_id)]
@@ -118,9 +134,10 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   setcolorder(tfs, c("species", "time", "tf", "tf_se", "n_obs", "sptot", "esttot"))
   setDF(tfs)
   out = list(freqs = freqs, tfs = tfs, sites = sites, species = species, times = times,
-             excluded_sites = exclude_sites, phi_target = phi_target, Rstar = Rstar)
+             phi_target = phi_target, Rstar = Rstar, excluded_sites = exclude_sites,
+             bench_exclude = bench_exclude, sampling_effort = sampling_effort)
   class(out) = "frescalo"
-  check_phi(out)
+  check_phi(out, prob = phi_prob)
   out
 }
 
@@ -201,7 +218,8 @@ check_r = function(object) {
 #'
 #' @returns A ggplot object.
 #'
-#' The plots correspond to Fig. 2 and 3 in Hill 2012.
+#' The plots correspond to Fig. 2 and 3 in Hill 2012, a comparison of neighbourhoud frequency curves
+#' before and after rescaling.
 #' @examples
 #' @export
 check_rescaling = function(object, max_sites = 500) {
@@ -219,7 +237,7 @@ check_rescaling = function(object, max_sites = 500) {
                            variable.name = "scaled", variable.factor = FALSE)
   pldat[, scaled := c("unscaled", "rescaled")[as.integer(scaled)]]
   ggplot(data = pldat, aes(x = .data[["rank"]], y = .data[["freq"]], group = .data[["samp"]])) +
-    geom_line(alpha = 100/min(nrow(object$sites), max_sites)) + facet_wrap("scaled", scales = "free_x")
+    geom_line(alpha = 100/min(nrow(object$sites), max_sites)) + facet_wrap("scaled", scales = "free_x") + theme_minimal()
 
 }
 

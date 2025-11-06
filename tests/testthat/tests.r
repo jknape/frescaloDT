@@ -38,21 +38,21 @@ comp_tfs = tfs[tfs_fortran, on = c("time" = "Time______", "species" = "Species__
 
 # The fortran printing statement f7.3 cannot print tf > 10000, these are therefore ****** -> NA in the fortran version.
 na_ind = which(is.na(comp_tfs$TFactor))
-expect_gt(min(comp_tfs[na_ind]$tf) , 10000)
-expect_gt(min(comp_tfs[na_ind]$se) , 10000)
 
+expect_gt(min(comp_tfs[na_ind]$tf) , 10000)
+expect_gt(min(comp_tfs[na_ind]$tf_se) , 10000)
 
 
 comp_tfs = comp_tfs[-na_ind]
 
 
 na_ind = which(is.na(comp_tfs$St_Dev))
-expect_lt(comp_tfs$tf[na_ind] / comp_tfs$se[na_ind], .02)
+expect_lt(comp_tfs$tf[na_ind] / comp_tfs$tf_se[na_ind], .02)
 
 comp_tfs = comp_tfs[-na_ind]
 
 expect_lt(max(abs(comp_tfs$tf - comp_tfs$TFactor)), .01)
-expect_lt(max(abs(comp_tfs$se - comp_tfs$St_Dev)), .02)
+expect_lt(max(abs(comp_tfs$tf_se - comp_tfs$St_Dev)), .02)
 expect_equal(max(abs(comp_tfs$n_obs - comp_tfs$X_Count)), 0)
 expect_lt(max(abs(comp_tfs$sptot - comp_tfs$X___spt)), .1)
 expect_equal(max(abs(comp_tfs$ic1 - comp_tfs$N.0.00)), 0)

@@ -1,15 +1,18 @@
-tfcalc = function(data, freqs, species, sites, times, Rstar = .27, no_bench = NULL) {
+benchmark_proportions = function(data, freqs, species, Rstar = .27, bench_exclude = NULL) {
   samp_id = spec_id = time_id = rank1 = bench = nbench = Freq_1 = bwght = spec = NULL # To avoid Notes in R CMD check
-  no_bench = ""
+
   species[, bwght := 1]
-  species[spec %in% no_bench, bwght := .001]
+  species[spec %in% bench_exclude, bwght := .001]
 
-  sampeff = species[freqs, list(samp_id, spec_id, bench = bwght * (rank1 < Rstar | rank == 1)), on = "spec_id"][, nbench := sum(bench), by = "samp_id"]
+  bench_prop = species[freqs, list(samp_id, spec_id, bench = bwght * (rank1 < Rstar | rank == 1)), on = "spec_id"][, nbench := sum(bench), by = "samp_id"]
 
-  sampeff = sampeff[data, list(samp_id, spec_id, time_id, bench, nbench), on = c("samp_id", "spec_id")][, list(samp_eff = sum(bench)/nbench[1]), by = list(samp_id, time_id)]
+  bench_prop = bench_prop[data, list(samp_id, spec_id, time_id, bench, nbench), on = c("samp_id", "spec_id")][, list(samp_eff = sum(bench)/nbench[1]), by = list(samp_id, time_id)]
+  setorderv(bench_prop, cols = c("samp_id", "time_id"))
+  bench_prop
+}
 
-
-  sampeff = dcast(sampeff, samp_id ~ time_id, value.var = "samp_eff", fill = 0)[sites[,list(samp_id)], on = "samp_id"]
+tfcalc = function(data, freqs, species, sites, times, sampeff) {
+  samp_id = spec_id = time_id = rank1 = Freq_1 = spec = NULL # To avoid Notes in R CMD check
 
   iocc = data.table(spec_id = rep(species$spec_id, each = nrow(times)), time_id = rep(times$time_id, nrow(species)))
   iocc0 = data[, list(occ = list(samp_id)), by = list(spec_id, time_id)]
@@ -24,6 +27,8 @@ tfcalc = function(data, freqs, species, sites, times, Rstar = .27, no_bench = NU
   ntf = length(jind)
   tfs = data.table(spec_id = jind, time_id = tind, tf = numeric(ntf), tf_se = numeric(ntf),
                    n_obs = integer(ntf), sptot = numeric(ntf), esttot = numeric(ntf), ic1 = integer(ntf), ic2 = integer(ntf), iter_tf = integer(ntf), iter_tf_se = integer(ntf),  conv = logical(ntf))
+
+  sampeff = dcast(sampeff, samp_id ~ time_id, value.var = "samp_eff", fill = 0)[sites[,list(samp_id)], on = "samp_id"]
 
   for (l in 1:length(jind)) {
     f_j = f_l[[jind[l]]]
@@ -85,26 +90,26 @@ tfcalc0 = function(iocc, s_t, f_j, kmax = 500) {
   list(tf = tf, tf_se = tf1 - tf, n_obs = n_obs, sptot = sptot, esttot = esttot, ic1 = ic1, ic2 = ic2, iter_tf1 = k, iter_tf_se = k2, conv = conv)
 }
 
-# Seems not much faster, maybe a little gain in memory allocation.
-tfcalc0_Rcpp = function(iocc, s_t, f_j, kmax = 100) {
-  wgt = rep(1, length(s_t))
-  iw = which(s_t < .0995)
-  wgt[iw] = 0.005  + 10 * s_t[iw]
-  sf = s_t * f_j
-  ic1 = sum(sf > 0)
-  ipf = which(sf > .98)
-  sf[ipf] = 0.98
-  ic2 = length(ipf)
-  Q = -log(1 - sf)
-  sptot = sum(wgt[iocc])
-  n_obs = length(iocc)
-  tf = 1
-
-  res1 = tf_iter(tf, wgt,Q,sptot)
-
-  sptot1 = sptot + sqrt(res1[3])
-
-  res2 = tf_iter(res1[1], wgt, Q, sptot1)
-
-  list(tf = res1[1], se = res2[1] - res1[1], n_obs = n_obs, sptot = sptot, esttot = res1[2], ic1 = ic1, ic2 = ic2, iter_tf1 = res1[4], iter_tf_se = res2[4], conv = res1[4] < kmax)
-}
+# # Seems not much faster, maybe slight gain in memory allocation.
+# tfcalc0_Rcpp = function(iocc, s_t, f_j, kmax = 100) {
+#   wgt = rep(1, length(s_t))
+#   iw = which(s_t < .0995)
+#   wgt[iw] = 0.005  + 10 * s_t[iw]
+#   sf = s_t * f_j
+#   ic1 = sum(sf > 0)
+#   ipf = which(sf > .98)
+#   sf[ipf] = 0.98
+#   ic2 = length(ipf)
+#   Q = -log(1 - sf)
+#   sptot = sum(wgt[iocc])
+#   n_obs = length(iocc)
+#   tf = 1
+#
+#   res1 = tf_iter(tf, wgt,Q,sptot)
+#
+#   sptot1 = sptot + sqrt(res1[3])
+#
+#   res2 = tf_iter(res1[1], wgt, Q, sptot1)
+#
+#   list(tf = res1[1], se = res2[1] - res1[1], n_obs = n_obs, sptot = sptot, esttot = res1[2], ic1 = ic1, ic2 = ic2, iter_tf1 = res1[4], iter_tf_se = res2[4], conv = res1[4] < kmax)
+# }
