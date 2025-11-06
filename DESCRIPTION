@@ -1,9 +1,9 @@
 Package: frescaloDT
 Title: Calculate Species Trends and Distribution from Presence Data with the Frescalo Algorithm 
-Version: 0.0.0.9000
+Version: 0.0.1
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+     person("Jonas", "Knape", email ="jonas.knape@slu.se", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-8012-5131"))
 Description: Implements the frescalo algorithm of Hill (2012) for estimating species distributions from species presences. Uses data.table under the hood for efficiency with large data sets. 
 License: GPL (>= 3)
 Encoding: UTF-8
@@ -14,3 +14,6 @@ Suggests:
 Config/testthat/edition: 3
 Imports: 
     data.table,ggplot2
+Depends: 
+    R (>= 3.5)
+LazyData: true

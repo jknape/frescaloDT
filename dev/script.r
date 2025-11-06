@@ -1,17 +1,7 @@
 
-library(data.table)
-setDTthreads(threads = 1)
-#profvis::profvis({for (kk in 1:100){
+data(bryophyte)
 
-#weights = read.table("../input/weights.txt")
-weights = fread("tests/testthat/testdata/weights.txt")
-weights = weights[,1:3]
-setnames(weights, c("samp", "samp1", "wgt"))
-
-#data = read.table("../input/occ.txt")
-data = fread("tests/testthat/testdata/Test.txt")
-
-fr = frescalo(data, weights)
+fr = frescalo(bryophyte, bryophyte_weights)
 
 check_phi(fr)
 

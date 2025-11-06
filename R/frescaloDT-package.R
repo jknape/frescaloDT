@@ -14,11 +14,13 @@
 #' @importFrom data.table setkey
 #' @importFrom data.table setorder
 #' @importFrom data.table setcolorder
+#' @importFrom data.table setorderv
 #' @importFrom data.table dcast
 #' @importFrom ggplot2 ggplot
 #' @importFrom ggplot2 aes
 #' @importFrom ggplot2 .data
 #' @importFrom ggplot2 geom_line
 #' @importFrom ggplot2 facet_wrap
+#' @importFrom ggplot2 theme_minimal
 ## usethis namespace: end
 NULL

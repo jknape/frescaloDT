@@ -2,16 +2,15 @@
 #'
 #' @param data Data frame with the samples. By default, first column is interpreted as the name or id of the sampled site,
 #'             the second column as the observed species, and the third column the time of observation. This can be changed
-#'             via tha colnames argument.
-#' @param weights Data frame with neighbourhood weights where the first column is the target site, second column is the
-#'                neighbour, and third column is the weight in the neigbourhood of the target site.
+#'             via the colnames argument.
+#' @param weights Data frame with neighborhood weights where the first column is the target site, second column is the
+#'                neighbor, and third column is the weight in the neighborhood of the target site.
 #' @param phi_target Target value for adjusted frequency weighted mean frequencies. The default value, 0.74, follows the default of Hill,
-#'                   but is arbitrary. If NA, target is set to the quantile of the empirical (unscaled) neighborhood mean frequencies determined by
-#'                   phi_prob.
+#'                   but is arbitrary. If NA, target is set to the quantile of the input mean frequencies corresponding to phi_prob.
 #' @param Rstar Threshold for species to be considered as benchmarks when computing time factors.
-#' @param phi_prob Used to check that the phi_target is not too low. A warning is generated if
-#'                 If phi_target is set to NA, the quantile of empirical (unscaled) neighborhood mean frequencies corresponding to phi_prob
-#'                 will be taken as the target.
+#' @param phi_prob Used to check that the phi_target is not too low. A warning is generated if thee quantile of input
+#'                 mean frequencies corresponding to phi_prob is larger than phi_target.
+#'                 If phi_target is set to NA, the quantile corresponding to phi_prob is taken as the target. Defaults to 0.985.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
 #' @param col_names A list with elements named location, species, time, location2 and weight and values equal to the corresponding
 #'                 column names in data and weight. Defaults to NULL in which case the order of the columns is used.
@@ -19,11 +18,14 @@
 #' @returns An object of class frescalo
 #'
 #'
-#' The implentation uses similar conventions to the original fortran program. E.g. small constants are added in strategic places
+#' The implementation uses similar conventions to the original fortran program. E.g. small constants are added in strategic places
 #' to avoid divisions by zero or other issues that can cause the algorithm to otherwise fail numerically.
 #'
 #'
 #' @examples
+#' data(bryophyte)
+#' fr = frescalo(bryophyte, bryophyte_weights)
+#' summary(fr)
 #' @export
 frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .985, bench_exclude = NULL, col_names = NULL) {
   samp_id = samp = spec_id = time_id = samp1_id = NULL # To avoid Notes in R CMD check
@@ -133,14 +135,51 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   tfs$time_id = NULL
   setcolorder(tfs, c("species", "time", "tf", "tf_se", "n_obs", "sptot", "esttot"))
   setDF(tfs)
-  out = list(freqs = freqs, tfs = tfs, sites = sites, species = species, times = times,
-             phi_target = phi_target, Rstar = Rstar, excluded_sites = exclude_sites,
+  out = list(call = match.call(), freqs = freqs, tfs = tfs, sites = sites, species = species, times = times,
+             phi_target = phi_target, Rstar = Rstar, phi_prob = phi_prob, excluded_sites = exclude_sites,
              bench_exclude = bench_exclude, sampling_effort = sampling_effort)
   class(out) = "frescalo"
   check_phi(out, prob = phi_prob)
   out
 }
 
+#' @exportS3Method base::summary
+summary.frescalo = function(object, ...) {
+  out = list(call = object$call,
+             nsp = nrow(object$species),
+        nsite = nrow(object$sites),
+        nt = nrow(object$times),
+        nobs = nrow(data),
+        nw = nrow(weights),
+        phi_target = object$phi_target,
+        phi_in_quant = quantile(object$sites$phi_orig, probs = c(.25,.5,.75, object$phi_prob)),
+        mean_nsp = c(mean(object$sites$n_spec), mean(object$sites$spnum_orig), mean(object$sites$spnum_new)))
+  class(out) = "summary.frescalo"
+  out
+}
+
+#' @exportS3Method base::print
+print.summary.frescalo = function(object, ...) {
+  cat("\nCall:\n")
+  print(object$call)
+  cat("\n######################################")
+  cat("\n\n  Number of sites:", object$nsite)
+  cat("\n  Number of species:", object$nsp)
+  cat("\n  Number of time periods:", object$nt)
+  cat("\n  Number of observations:", object$nobs)
+  cat("\n  Number of weights:", object$nw)
+  cat("\n\n######################################")
+  cat("\n")
+  cat("\n Target phi:", object$phi_target)
+  cat("\n")
+  cat("\n Quantiles of input phi:\n")
+  print(object$phi_in_quant, digits = 2)
+  cat("\n\n######################################")
+  cat("\n\n  Mean number of species per site")
+  cat("\n   Observed:", object$mean_nsp[1])
+  cat("\n   Neighborhood, no adjustment:", object$mean_nsp[2])
+  cat("\n   Neighborhood, adjusted:", object$mean_nsp[3])
+}
 
 #' Extract species frequencies from a frescalo object.
 #'
