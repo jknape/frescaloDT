@@ -1,5 +1,5 @@
 # Note: info is added to 'sites' as side effect.
-frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 100, fmax=0.99999, fmin=1.0E-10, tol=0.0003) {
+frescaDT2 = function(dat, sites, phi_target = .74, irepmax = 500, fmax=0.99999, fmin=1.0E-10, tol=0.0003) {
   f = dat$freq
   sa_id = dat$samp_id[1]
   wn2 = sites$wn2[sa_id]

@@ -22,7 +22,7 @@ tfcalc = function(data, freqs, species, sites, times, Rstar = .27, no_bench = NU
   f_l = freqs[order(spec_id), list(list(Freq_1)), by = spec_id]$V1
 
   ntf = length(jind)
-  tfs = data.table(spec_id = jind, time_id = tind, tf = numeric(ntf), se = numeric(ntf),
+  tfs = data.table(spec_id = jind, time_id = tind, tf = numeric(ntf), tf_se = numeric(ntf),
                    n_obs = integer(ntf), sptot = numeric(ntf), esttot = numeric(ntf), ic1 = integer(ntf), ic2 = integer(ntf), iter_tf = integer(ntf), iter_tf_se = integer(ntf),  conv = logical(ntf))
 
   for (l in 1:length(jind)) {
@@ -31,18 +31,18 @@ tfcalc = function(data, freqs, species, sites, times, Rstar = .27, no_bench = NU
     s_t[s_t == 0] = 1e-7 # ~ L37
     s_t[is.na(s_t)] = 1e-7 # ~ L37
     if (length(iocc[[l]]) < 1) {
-      set(tfs, l, c("tf", "se", "n_obs", "sptot", "esttot", "ic1", "ic2", "iter_tf", "iter_tf_se", "conv"),
+      set(tfs, l, c("tf", "tf_se", "n_obs", "sptot", "esttot", "ic1", "ic2", "iter_tf", "iter_tf_se", "conv"),
           list(0,0, length(iocc[[l]]), 0, 0,0,0, 0, 0, TRUE))
     } else {
       #browser()
-      set(tfs, l, c("tf", "se", "n_obs", "sptot", "esttot", "ic1", "ic2",  "iter_tf", "iter_tf_se",  "conv"),
+      set(tfs, l, c("tf", "tf_se", "n_obs", "sptot", "esttot", "ic1", "ic2",  "iter_tf", "iter_tf_se",  "conv"),
           tfcalc0(iocc[[l]], s_t, f_j))
     }
   }
   tfs
 }
 
-tfcalc0 = function(iocc, s_t, f_j, kmax = 100) {
+tfcalc0 = function(iocc, s_t, f_j, kmax = 500) {
   wgt = rep(1, length(s_t))
   iw = which(s_t < .0995)
   wgt[iw] = 0.005  + 10 * s_t[iw]
@@ -82,7 +82,7 @@ tfcalc0 = function(iocc, s_t, f_j, kmax = 100) {
     }
     k2 = k2 + 1
   }
-  list(tf = tf, se = tf1 - tf, n_obs = n_obs, sptot = sptot, esttot = esttot, ic1 = ic1, ic2 = ic2, iter_tf1 = k, iter_tf_se = k2, conv = conv)
+  list(tf = tf, tf_se = tf1 - tf, n_obs = n_obs, sptot = sptot, esttot = esttot, ic1 = ic1, ic2 = ic2, iter_tf1 = k, iter_tf_se = k2, conv = conv)
 }
 
 # Seems not much faster, maybe a little gain in memory allocation.

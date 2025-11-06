@@ -36,10 +36,11 @@ similarity = function(data, site, species) {
   if (!isDT) {
     setDT(data)
   }
-  dat = data[, list(unique(species)), by = site]
+  dat = data[, list(splist = list(unique(species))), by = site]
   if (!isDT) {
     setDF(data)
   }
+  sapply(dat$splist[1:2000], l = dat$splist, FUN = neigh_sorensen)
   #dists = apply(data, 1, function(row) {neigh_sorensen});
 }
 

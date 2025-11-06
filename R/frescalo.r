@@ -96,7 +96,7 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
       value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank1 = R´, Hill P200.
   setkey(freqs, samp_id) # Not needed, minimal improvement if any?
 
-  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(samp_id), .SDcols = c("samp_id", "freq")]
+  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 500), keyby = list(samp_id), .SDcols = c("samp_id", "freq")]
 
   tfs = tfcalc(data, freqs, species, sites, times, Rstar = Rstar, no_bench = bench_exclude)
 
@@ -110,7 +110,7 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, bench_exclude
   tfs$spec_id = NULL
   tfs$time = times$time[match(tfs$time_id, times$time_id)]
   tfs$time_id = NULL
-  setcolorder(tfs, c("species", "time", "tf", "se", "n_obs", "sptot", "esttot"))
+  setcolorder(tfs, c("species", "time", "tf", "tf_se", "n_obs", "sptot", "esttot"))
   setDF(tfs)
   out = list(freqs = freqs, tfs = tfs, sites = sites, species = species, times = times,
              excluded_sites = exclude_sites, phi_target = phi_target, Rstar = Rstar)
