@@ -241,9 +241,10 @@ check_rescaling = function(object, max_sites = 500) {
 
 }
 
-# Estimated probability of occurence under standard effort, sit = 1 meaning all benchmarks found (Bijlsma). Note that this depends on the proportion of benchmarks (see Prescott 2025).
+# Estimated probability of occurence under standard effort, sit = 1 meaning all benchmarks found (Bijlsma).
+#' Note that this depends on the proportion of benchmarks (see Prescott 2025).
 # Note: this is rather probability of detection under a sampling effort sufficient for all benchmarks to be found(?)
-# Also assumes identical trends across all sites...
+# Also assumes identical trends across all sites.
 # Computed for a subset of species to avoid huge output.
 prob_occ = function(object, spec, s = 1) {
   setDT(fr$freqs)
