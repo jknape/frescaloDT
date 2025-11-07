@@ -12,12 +12,12 @@
 #'                 mean frequencies corresponding to phi_prob is larger than phi_target.
 #'                 If phi_target is set to NA, the quantile corresponding to phi_prob is taken as the target. Defaults to 0.985.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
-#' @param col_names A list with elements named location, species, time, location2 and weight and values equal to the corresponding
+#' @param col_names TODO, NOT WORKING YET. A list with elements named location, species, time, location2 and weight and values equal to the corresponding
 #'                 column names in data and weight. Defaults to NULL in which case the order of the columns is used.
 #'
-#' @returns An object of class frescalo
+#' @returns A frescalo object.
 #'
-#'
+#' @details
 #' The implementation uses similar conventions to the original fortran program. E.g. small constants are added in strategic places
 #' to avoid divisions by zero or other issues that can cause the algorithm to otherwise fail numerically.
 #'
@@ -84,6 +84,12 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   }
   data =  data[!(samp %in% exclude_sites)]
 
+
+
+  # Key tables for species and times
+  species = data.table(spec = sort(unique(data$spec)))[, spec_id := 1:.N] # Note: species may have been removed, if only present in excluded sites.
+  times = data.table(time = sort(unique(data$time)))[, time_id := 1:.N]
+
   if (length(bench_exclude) > 0) {
     bm = match(bench_exclude, species$spec, nomatch = 0)
     if (sum(bm == 0) > 0) {
@@ -91,10 +97,6 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
     }
     bench_exclude = bench_exclude[bm > 0]
   }
-
-  # Key tables for species and times
-  species = data.table(spec = sort(unique(data$spec)))[, spec_id := 1:.N] # Note: species may have been removed, if only present in excluded sites.
-  times = data.table(time = sort(unique(data$time)))[, time_id := 1:.N]
 
   # Add keys to weights
   weights[ , samp_id := sites$samp_id[pmatch(weights$samp, sites$samp ,duplicates.ok = TRUE)]]
@@ -137,7 +139,8 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   setDF(tfs)
   out = list(call = match.call(), freqs = freqs, tfs = tfs, sites = sites, species = species, times = times,
              phi_target = phi_target, Rstar = Rstar, phi_prob = phi_prob, excluded_sites = exclude_sites,
-             bench_exclude = bench_exclude, sampling_effort = sampling_effort)
+             bench_exclude = bench_exclude, sampling_effort = sampling_effort,
+             n_obs = nrow(data), n_weights = nrow(weights))
   class(out) = "frescalo"
   check_phi(out, prob = phi_prob)
   out
@@ -149,8 +152,8 @@ summary.frescalo = function(object, ...) {
              nsp = nrow(object$species),
         nsite = nrow(object$sites),
         nt = nrow(object$times),
-        nobs = nrow(data),
-        nw = nrow(weights),
+        n_obs = object$n_obs,
+        n_weights = object$n_weights,
         phi_target = object$phi_target,
         phi_in_quant = quantile(object$sites$phi_orig, probs = c(.25,.5,.75, object$phi_prob)),
         mean_nsp = c(mean(object$sites$n_spec), mean(object$sites$spnum_orig), mean(object$sites$spnum_new)))
@@ -166,19 +169,20 @@ print.summary.frescalo = function(object, ...) {
   cat("\n\n  Number of sites:", object$nsite)
   cat("\n  Number of species:", object$nsp)
   cat("\n  Number of time periods:", object$nt)
-  cat("\n  Number of observations:", object$nobs)
-  cat("\n  Number of weights:", object$nw)
+  cat("\n  Number of observations:", object$n_obs)
+  cat("\n  Number of weights:", object$n_weights)
   cat("\n\n######################################")
   cat("\n")
   cat("\n Target phi:", object$phi_target)
   cat("\n")
   cat("\n Quantiles of input phi:\n")
   print(object$phi_in_quant, digits = 2)
-  cat("\n\n######################################")
+  cat("\n######################################")
   cat("\n\n  Mean number of species per site")
-  cat("\n   Observed:", object$mean_nsp[1])
-  cat("\n   Neighborhood, no adjustment:", object$mean_nsp[2])
-  cat("\n   Neighborhood, adjusted:", object$mean_nsp[3])
+  cat("\n  Observed:", round(object$mean_nsp[1],1))
+  cat("\n  Expected, no adjustment:", round(object$mean_nsp[2],1))
+  cat("\n  Expected, after adjustment:", round(object$mean_nsp[3],1))
+  cat("\n\n######################################")
 }
 
 #' Extract species frequencies from a frescalo object.
@@ -189,6 +193,9 @@ print.summary.frescalo = function(object, ...) {
 #'
 #'
 #' @examples
+#' data(bryophyte)
+#' fr = frescalo(bryophyte, bryophyte_weights)
+#' frequencies(fr)
 #' @export
 frequencies = function(object) {
   # freqs = object$freqs # Results in additional copy of large table.
@@ -204,9 +211,12 @@ frequencies = function(object) {
 #' @param object An object as returned from the frescalo function.
 #'
 #' @returns A data frame with time factors across species.
-#' @export
 #'
 #' @examples
+#' data(bryophyte)
+#' fr = frescalo(bryophyte, bryophyte_weights)
+#' timefactors(fr)
+#' @export
 timefactors = function(object) {
   #if (is.null(object$tfs)) {
     #tfalc....
@@ -257,9 +267,12 @@ check_r = function(object) {
 #'
 #' @returns A ggplot object.
 #'
-#' The plots correspond to Fig. 2 and 3 in Hill 2012, a comparison of neighbourhoud frequency curves
+#' The plots correspond to Fig. 2 and 3 in Hill 2012, a comparison of neighborhoud frequency curves
 #' before and after rescaling.
 #' @examples
+#' data(bryophyte)
+#' fr = frescalo(bryophyte, bryophyte_weights)
+#' check_rescaling(fr)
 #' @export
 check_rescaling = function(object, max_sites = 500) {
   scaled = NULL
@@ -280,16 +293,32 @@ check_rescaling = function(object, max_sites = 500) {
 
 }
 
-# Estimated probability of occurence under standard effort, sit = 1 meaning all benchmarks found (Bijlsma).
-#' Note that this depends on the proportion of benchmarks (see Prescott 2025).
-# Note: this is rather probability of detection under a sampling effort sufficient for all benchmarks to be found(?)
-# Also assumes identical trends across all sites.
-# Computed for a subset of species to avoid huge output.
-prob_occ = function(object, spec, s = 1) {
+
+
+
+
+#' Compute estimated occupancy probabilities for a given level of effort.
+#'
+#' @param object An object as returned from the frescalo function.
+#' @param spec A character vector of species names for which to compute probabilities.
+#' @param s Level of effort.
+#'
+#' @returns
+#'
+#' @note
+#' Estimated probability of occurence under standard effort, sit = 1 meaning all benchmarks found (Bijlsma).
+#' This depends on the proportion of benchmarks (see Prescott 2025).
+#' Note: this is rather probability of detection under a sampling effort sufficient for all benchmarks to be found(?)
+#  By assumption of the frescalo method trends in occupancy probability are identical across sites.
+#' @examples
+#' @export
+occupancy_prob = function(object, species, s = 1) {
   setDT(fr$freqs)
   setDT(fr$tfs)
-  out = merge(object$freqs[species %in% spec, list(species, samp, Freq_1)],
-                          object$tfs[species %in% spec, list(species, time, tf)], allow.cartesian = TRUE)
+  keep_f = which(object$freqs$species %in% species)
+  keep_tfs = which(object$tfs$species %in% species)
+  out = merge(object$freqs[keep_f, list(species, samp, Freq_1)],
+                          object$tfs[keep_tfs, list(species, time, tf)], allow.cartesian = TRUE)
   out[, p_occ := 1 - (1-s * Freq_1)^tf]
   out$tf = NULL
   out$Freq_1 = NULL

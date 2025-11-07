@@ -9,6 +9,8 @@ weights = weights[,1:3]
 setnames(weights, c("samp", "samp1", "wgt"))
 
 data = fread("testdata/Test.txt")
+setDF(data)
+setDF(weights)
 
 fr = frescalo(data, weights)
 

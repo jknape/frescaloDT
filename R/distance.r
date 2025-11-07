@@ -58,7 +58,7 @@ neigh_sorensen = function(x, l) {
 #' @param D Distance matrix
 #' @param ids Labels or ids for the sites.
 #'
-#' @returns A data frame with distances between pairs of sites.
+#' @returns description A data frame with distances between pairs of sites.
 # @export
 #'
 #' @examples
