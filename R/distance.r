@@ -73,7 +73,7 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D))) {
     setkey(out, "site", "neigh")
     out = out[pairs]
   }
-  setorder(out, site, dist)
+  setorderv(out, c("site", "dist"))
   out[, dist_rank := 1:.N, by = "site"]
   if (max_neigh < n) {
     out = out[dist_rank <= max_neigh]
@@ -103,10 +103,10 @@ dist2df.dist <- function(D, labels = NULL, max_neigh = 200, pairs = NULL) {
   if (!is.null(pairs)) { # This requires first creating full n x n data.frame out. Could be avoided, but indexing gets complicated.
     setDT(pairs)
     setkeyv(pairs, colnames(pairs))
-    setkey(out, "site", "neigh")
+    setkeyv(out, c("site", "neigh"))
     out = out[pairs]
   }
-  setorder(out, site, dist)
+  setorderv(out, c("site", "dist"))
   out[, dist_rank := 1:.N, by = "site"]
   if (max_neigh < n) {
     out = out[dist_rank <= max_neigh]

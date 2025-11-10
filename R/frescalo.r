@@ -2,18 +2,23 @@
 #'
 #' @param data Data frame with the samples. By default, first column is interpreted as the name or id of the sampled site,
 #'             the second column as the observed species, and the third column the time of observation. This can be changed
-#'             via the colnames argument.
+#'             via the \code{data_names} and \code{weihgts_names} arguments.
 #' @param weights Data frame with neighborhood weights where the first column is the target site, second column is the
 #'                neighbor, and third column is the weight in the neighborhood of the target site.
 #' @param phi_target Target value for adjusted frequency weighted mean frequencies. The default value, 0.74, follows the default of Hill,
-#'                   but is arbitrary. If NA, target is set to the quantile of the input mean frequencies corresponding to phi_prob.
+#'                   but is arbitrary. If NA, target is set to the quantile of the input mean frequencies corresponding to \code{phi_prob}.
 #' @param Rstar Threshold for species to be considered as benchmarks when computing time factors.
-#' @param phi_prob Used to check that the phi_target is not too low. A warning is generated if thee quantile of input
-#'                 mean frequencies corresponding to phi_prob is larger than phi_target.
-#'                 If phi_target is set to NA, the quantile corresponding to phi_prob is taken as the target. Defaults to 0.985.
+#' @param phi_prob Used to check that \code{phi_target} is not too low. A warning is generated if thee quantile of input
+#'                 mean frequencies corresponding to \code{phi_prob} is larger than \code{phi_target}.
+#'                 If \code{phi_target} is set to NA, the quantile corresponding to \code{phi_prob} is taken as the target.
+#'                 Defaults to 0.985.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
-#' @param col_names TODO, NOT WORKING YET. A list with elements named location, species, time, location2 and weight and values equal to the corresponding
-#'                 column names in data and weight. Defaults to NULL in which case the order of the columns is used.
+#' @param data_names TODO, NOT WORKING YET. A named list or character vector with elements named samp, spec, time,
+#'                   and values equal to the corresponding column names in data.
+#'                   Defaults to NULL in which case the order of the columns is used.
+#' @param weights_names TODO, NOT WORKING YET. A named list or character vector with elements named samp, samp1, wgt,
+#'                   and values equal to the corresponding column names in data.
+#'                   Defaults to NULL in which case the order of the columns is used.
 #'
 #' @returns A frescalo object.
 #'
@@ -26,40 +31,36 @@
 #' data(bryophyte)
 #' fr = frescalo(bryophyte, bryophyte_weights)
 #' summary(fr)
+#' frequencies(fr)
+#' timefactors(fr)
 #' @export
-frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .985, bench_exclude = NULL, col_names = NULL) {
+frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .985, bench_exclude = NULL,
+                    data_names = NULL, weights_names = NULL) {
   samp_id = samp = spec_id = time_id = samp1_id = NULL # To avoid Notes in R CMD check
 
-  if (is.null(col_names)) {
+  if (is.null(data_names)) {
     data = data[,1:3]
     data_names = colnames(data)
     setDT(data) # Should copy, otherwise may be reordered on return!
     setnames(data, c("samp", "spec", "time"))
-
+  } else {
+    data_names = match_cols(data, data_names, c("samp", "spec", "time"))
+    data = data[, data_names]
+    setDT(data)
+    setnames(data, names(data_names))
+  }
+  if (is.null(weights_names)) {
     weights = weights[,1:3]
     weight_names = colnames(weights)
     setDT(weights)
     setnames(weights, c("samp", "samp1", "wgt"))
   } else {
-    expected_cols = c("location", "species", "time", "location2", "weight")
-    names(col_names) = match.arg(names(col_names), expected_cols, several.ok = TRUE)
-    missing_cols = setdiff(expected_cols, names(col_names))
-    if (length(missing_cols)>0) {
-      stop(paste0("Name of ", paste0(missing_cols, collapse = ", "), " not found in col_names."))
-    }
-    data_names = match.arg(colnames(data), unlist(col_names[c("location", "species", "time")]), several.ok = TRUE)
-    if (length(data_names) != 3 ) {
-      missing_cols = setdiff(expected_cols[1:3], names(data_names))
-      stop(paste0("Column(s) ", paste0(col_names[missing_cols], collapse = ", "), " not found data."))
-    }
-    weight_names = match.arg(colnames(data), unlist(col_names[c("location", "location2", "weight")]), several.ok = TRUE)
-    if (length(weight_names) != 3 ) {
-      missing_cols = setdiff(expected_cols[c(1,4:5)], names(weight_names))
-      stop(paste0("Column(s) ", paste0(col_names[missing_cols], collapse = ", "), " not found weights."))
-    }
-    browser()
-    data = data[, c(data_names)]
+    weights_names = match_cols(weights, weights_names, c("samp", "samp1", "wgt"))
+    weights = weights[, weights_names]
+    setDT(weights)
+    setnames(weights, names(weights_names))
   }
+
   stopifnot(setequal(unique(weights$samp), unique(weights$samp1))) # How handle this??
   sites = data.table(samp = sort(unique(c(weights$samp))))[, samp_id := 1:.N]
 
@@ -83,8 +84,6 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
     message(paste("Site(s)", paste(exclude_sites, collapse = ", "), "not present in weights, removed."))
   }
   data =  data[!(samp %in% exclude_sites)]
-
-
 
   # Key tables for species and times
   species = data.table(spec = sort(unique(data$spec)))[, spec_id := 1:.N] # Note: species may have been removed, if only present in excluded sites.
@@ -129,21 +128,45 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   freqs$samp = sites$samp[match(freqs$samp_id, sites$samp_id)]
   freqs$spec_id = NULL
   freqs$samp_id = NULL
-  setDF(freqs)
+
 
   tfs$species = species$spec[match(tfs$spec_id, species$spec_id)]
   tfs$spec_id = NULL
   tfs$time = times$time[match(tfs$time_id, times$time_id)]
   tfs$time_id = NULL
   setcolorder(tfs, c("species", "time", "tf", "tf_se", "n_obs", "sptot", "esttot"))
+  setDF(freqs) # Allows copy on modify while avoiding risk of changing frescalo object when returning via frequencies()
   setDF(tfs)
-  out = list(call = match.call(), freqs = freqs, tfs = tfs, sites = sites, species = species, times = times,
+  out = list(call = match.call(),
+             data_names = data_names,
+             weights_names = weights_names,
+             freqs = freqs, tfs = tfs, sites = sites, species = species, times = times,
              phi_target = phi_target, Rstar = Rstar, phi_prob = phi_prob, excluded_sites = exclude_sites,
              bench_exclude = bench_exclude, sampling_effort = sampling_effort,
              n_obs = nrow(data), n_weights = nrow(weights))
   class(out) = "frescalo"
   check_phi(out, prob = phi_prob)
   out
+}
+
+match_cols = function(data, col_names, expected) {
+  parg = deparse1(substitute(col_names))
+  if (length(col_names) != length(expected)) {
+    stop(paste(parg, "should have length", length(expected)))
+  }
+  col_names = unlist(col_names)
+  list_names = names(col_names)
+  list_names = match.arg(list_names, expected, several.ok = TRUE)
+  missing_cols = setdiff(expected, list_names)
+  if (length(missing_cols)>0) {
+    stop(paste0(paste0(missing_cols, collapse = ", "), " not found in ", parg))
+  }
+  data_names = match.arg(colnames(data), col_names, several.ok = TRUE)
+  if (length(data_names) != length(expected)) {
+    missing_cols = setdiff(expected, names(data_names))
+    stop(paste0("Column(s) ", paste0(col_names[list_names %in% missing_cols], collapse = ", "), " not in found data."))
+  }
+  data_names
 }
 
 #' @exportS3Method base::summary
@@ -313,18 +336,18 @@ check_rescaling = function(object, max_sites = 500) {
 #' @examples
 #' @export
 occupancy_prob = function(object, species, s = 1) {
-
-  setDT(fr$freqs)
-  setDT(fr$tfs)
+  Freq_1 = tf = NULL
+  setDT(object$freqs)
+  setDT(object$tfs)
   keep_f = which(object$freqs$species %in% species)
   keep_tfs = which(object$tfs$species %in% species)
-  out = merge(object$freqs[keep_f, list(species, samp, Freq_1)],
-                          object$tfs[keep_tfs, list(species, time, tf)], allow.cartesian = TRUE)
-  out[, p_occ := 1 - (1-s * Freq_1)^tf]
+  out = merge(object$freqs[keep_f, c("species", "samp", "Freq_1")],
+                          object$tfs[keep_tfs, c("species", "time", "tf")], allow.cartesian = TRUE)
+  out[, "p_occ" := 1 - (1 - s * Freq_1)^tf]
   out$tf = NULL
   out$Freq_1 = NULL
-  setDF(fr$freqs)
-  setDF(fr$tfs)
+  setDF(object$freqs)
+  setDF(object$tfs)
   setDF(out)
   out
 }
