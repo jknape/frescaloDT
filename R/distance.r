@@ -1,4 +1,4 @@
-#' Compute euclidead distances and their ranks coordinates.
+#' Compute euclidean distances and their ranks coordinates.
 #'
 #' @param data A data frame with site names and x and y coordinates.
 #' @param site Name of column with site/location name or id.

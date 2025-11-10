@@ -162,26 +162,26 @@ summary.frescalo = function(object, ...) {
 }
 
 #' @exportS3Method base::print
-print.summary.frescalo = function(object, ...) {
+print.summary.frescalo = function(x, ...) {
   cat("\nCall:\n")
-  print(object$call)
+  print(x$call)
   cat("\n######################################")
-  cat("\n\n  Number of sites:", object$nsite)
-  cat("\n  Number of species:", object$nsp)
-  cat("\n  Number of time periods:", object$nt)
-  cat("\n  Number of observations:", object$n_obs)
-  cat("\n  Number of weights:", object$n_weights)
+  cat("\n\n  Number of sites:", x$nsite)
+  cat("\n  Number of species:", x$nsp)
+  cat("\n  Number of time periods:", x$nt)
+  cat("\n  Number of observations:", x$n_obs)
+  cat("\n  Number of weights:", x$n_weights)
   cat("\n\n######################################")
   cat("\n")
-  cat("\n Target phi:", object$phi_target)
+  cat("\n Target phi:", x$phi_target)
   cat("\n")
   cat("\n Quantiles of input phi:\n")
-  print(object$phi_in_quant, digits = 2)
+  print(x$phi_in_quant, digits = 2)
   cat("\n######################################")
   cat("\n\n  Mean number of species per site")
-  cat("\n  Observed:", round(object$mean_nsp[1],1))
-  cat("\n  Expected, no adjustment:", round(object$mean_nsp[2],1))
-  cat("\n  Expected, after adjustment:", round(object$mean_nsp[3],1))
+  cat("\n  Observed:", round(x$mean_nsp[1],1))
+  cat("\n  Expected, no adjustment:", round(x$mean_nsp[2],1))
+  cat("\n  Expected, after adjustment:", round(x$mean_nsp[3],1))
   cat("\n\n######################################")
 }
 
@@ -206,7 +206,7 @@ frequencies = function(object) {
 }
 
 
-#' Extract time facotrs from a frescalo object.
+#' Extract time factors from a frescalo object.
 #'
 #' @param object An object as returned from the frescalo function.
 #'
@@ -300,7 +300,7 @@ check_rescaling = function(object, max_sites = 500) {
 #' Compute estimated occupancy probabilities for a given level of effort.
 #'
 #' @param object An object as returned from the frescalo function.
-#' @param spec A character vector of species names for which to compute probabilities.
+#' @param species A character vector of species names for which to compute probabilities.
 #' @param s Level of effort.
 #'
 #' @returns
@@ -313,6 +313,7 @@ check_rescaling = function(object, max_sites = 500) {
 #' @examples
 #' @export
 occupancy_prob = function(object, species, s = 1) {
+
   setDT(fr$freqs)
   setDT(fr$tfs)
   keep_f = which(object$freqs$species %in% species)

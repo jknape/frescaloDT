@@ -66,10 +66,10 @@ expect_lt(max(abs(comp_tfs$esttot - comp_tfs$X___est)), .1)
 
 # TODO: check what happens when there are duplicate records in input
 
-fr2 = frescalo(data[c(1, 1:nrow(data))], weights)
+fr2 = frescalo(data[c(1, 1:nrow(data)), ], weights)
 
 # TODO: check that order of input doesn't matter
 
-fr2 = frescalo(data[sample(1:nrow(data))], weights[sample(1:nrow(weights))])
+fr2 = frescalo(data[sample(1:nrow(data)), ], weights[sample(1:nrow(weights)),])
 
 # TODO: check varying names of input columns
