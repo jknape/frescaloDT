@@ -1,21 +1,21 @@
 benchmark_proportions = function(data, freqs, species, Rstar = .27, bench_exclude = NULL) {
-  samp_id = spec_id = time_id = rank1 = bench = nbench = Freq_1 = bwght = spec = NULL # To avoid Notes in R CMD check
+  location_id = spec_id = time_id = rank1 = bench = nbench = Freq_1 = bwght = spec = NULL # To avoid Notes in R CMD check
 
   species[, bwght := 1]
   species[spec %in% bench_exclude, bwght := .001]
 
-  bench_prop = species[freqs, list(samp_id, spec_id, bench = bwght * (rank1 < Rstar | rank == 1)), on = "spec_id"][, nbench := sum(bench), by = "samp_id"]
+  bench_prop = species[freqs, list(location_id, spec_id, bench = bwght * (rank1 < Rstar | rank == 1)), on = "spec_id"][, nbench := sum(bench), by = "location_id"]
 
-  bench_prop = bench_prop[data, list(samp_id, spec_id, time_id, bench, nbench), on = c("samp_id", "spec_id")][, list(samp_eff = sum(bench)/nbench[1]), by = list(samp_id, time_id)]
-  setorderv(bench_prop, cols = c("samp_id", "time_id"))
+  bench_prop = bench_prop[data, list(location_id, spec_id, time_id, bench, nbench), on = c("location_id", "spec_id")][, list(samp_eff = sum(bench)/nbench[1]), by = list(location_id, time_id)]
+  setorderv(bench_prop, cols = c("location_id", "time_id"))
   bench_prop
 }
 
 tfcalc = function(data, freqs, species, sites, times, sampeff) {
-  samp_id = spec_id = time_id = rank1 = Freq_1 = spec = NULL # To avoid Notes in R CMD check
+  location_id = spec_id = time_id = rank1 = Freq_1 = spec = NULL # To avoid Notes in R CMD check
 
   iocc = data.table(spec_id = rep(species$spec_id, each = nrow(times)), time_id = rep(times$time_id, nrow(species)))
-  iocc0 = data[, list(occ = list(samp_id)), by = list(spec_id, time_id)]
+  iocc0 = data[, list(occ = list(location_id)), by = list(spec_id, time_id)]
   iocc = iocc0[iocc, on = list(spec_id, time_id)]
   setorder(iocc, spec_id, time_id)
 
@@ -28,7 +28,7 @@ tfcalc = function(data, freqs, species, sites, times, sampeff) {
   tfs = data.table(spec_id = jind, time_id = tind, tf = numeric(ntf), tf_se = numeric(ntf),
                    n_obs = integer(ntf), sptot = numeric(ntf), esttot = numeric(ntf), ic1 = integer(ntf), ic2 = integer(ntf), iter_tf = integer(ntf), iter_tf_se = integer(ntf),  conv = logical(ntf))
 
-  sampeff = dcast(sampeff, samp_id ~ time_id, value.var = "samp_eff", fill = 0)[sites[,list(samp_id)], on = "samp_id"]
+  sampeff = dcast(sampeff, location_id ~ time_id, value.var = "samp_eff", fill = 0)[sites[,list(location_id)], on = "location_id"]
 
   for (l in 1:length(jind)) {
     f_j = f_l[[jind[l]]]

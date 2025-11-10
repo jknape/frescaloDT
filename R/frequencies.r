@@ -1,25 +1,25 @@
 # Compute neighbourhoud frequencies
 nfcalc = function(data, weights, sites, species, return_type = "dt") {
-  wgt = samp_id = spec_id = samp1_id = pres = NULL # To avoid Notes in R CMD check
+  weight = location_id = spec_id = neigh_id = pres = NULL # To avoid Notes in R CMD check
   # L254
   #swgt = weights[, .(wgttot = sum(wgt), wgt2 = sum(wgt^2)),by = samp]
-  swgt = weights[, list(wgttot = sum(wgt), wgt2 = sum(wgt^2)), by = samp_id]
-  setorder(swgt, samp_id)
+  swgt = weights[, list(wgttot = sum(weight), wgt2 = sum(weight^2)), by = location_id]
+  setorder(swgt, location_id)
 
   set(sites, j = "wn2", value = swgt$wgttot^2 / (swgt$wgt2 + 1e-12)) # Save for computation in fresca
 
-  swgt_inv = weights[, list(neighs = list(samp_id), neighw = list(wgt)), by = samp1_id]
-  setorder(swgt_inv, samp1_id)
+  swgt_inv = weights[, list(neighs = list(location_id), neighw = list(weight)), by = neigh_id]
+  setorder(swgt_inv, neigh_id)
 
-  stopifnot(identical(sites$samp_id, swgt$samp_id))
-  stopifnot(identical(sites$samp_id, swgt_inv$samp1_id))
+  stopifnot(identical(sites$location_id, swgt$location_id))
+  stopifnot(identical(sites$location_id, swgt_inv$neigh_id))
 
-  occ = data[, list(occ_ind = list(unique(spec_id))), by = samp_id]
-  occ = occ[sites, on = c("samp_id")]
+  occ = data[, list(occ_ind = list(unique(spec_id))), by = location_id]
+  occ = occ[sites, on = c("location_id")]
 
   set(sites, j = "n_spec", value = sapply(occ$occ_ind, length))
 
-  stopifnot(identical(sites$samp_id, occ$samp_id))
+  stopifnot(identical(sites$location_id, occ$location_id))
 
   # L267
   #idat = data[ , .(idat = .N, iitot = uniqueN(spec)), by = samp]
@@ -51,7 +51,7 @@ nfcalc = function(data, weights, sites, species, return_type = "dt") {
       set(sites, j = "occ_ind", value = occ_ind)
       return(ffij)
   }
-  freqs = data.table(samp_id = rep(1:nrow(ffij), ncol(ffij)), spec_id = rep(1:ncol(ffij), each = nrow(ffij)), freq = as.vector(ffij), pres = 0L)
+  freqs = data.table(location_id = rep(1:nrow(ffij), ncol(ffij)), spec_id = rep(1:ncol(ffij), each = nrow(ffij)), freq = as.vector(ffij), pres = 0L)
   pind = do.call(c, mapply(function(j,i) {i + (j-1L)*nrow(ffij)} , occ_ind, 1:nrow(ffij)))
   set(freqs, i = pind, j = "pres", 1L)
 

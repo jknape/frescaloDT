@@ -6,7 +6,7 @@ setDT(freqs_fortran)
 
 weights = fread("testdata/weights.txt")
 weights = weights[,1:3]
-setnames(weights, c("samp", "samp1", "wgt"))
+setnames(weights, c("location", "neigh", "wgt"))
 
 data = fread("testdata/Test.txt")
 setDF(data)
@@ -19,7 +19,7 @@ freqs = frequencies(fr)
 setDT(freqs)
 
 
-comp_frq = freqs[freqs_fortran, on = c("samp" = "Location", "species" = "Species")]
+comp_frq = freqs[freqs_fortran, on = c("location" = "Location", "species" = "Species")]
 
 
 expect_lt(max(abs(comp_frq$freq - comp_frq$Freq__)), 1e-4)

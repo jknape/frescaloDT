@@ -13,10 +13,10 @@
 #'                 If \code{phi_target} is set to NA, the quantile corresponding to \code{phi_prob} is taken as the target.
 #'                 Defaults to 0.985.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
-#' @param data_names TODO, NOT WORKING YET. A named list or character vector with elements named samp, spec, time,
+#' @param data_names TODO, NOT WORKING YET. A named list or character vector with elements named location, spec, time,
 #'                   and values equal to the corresponding column names in data.
 #'                   Defaults to NULL in which case the order of the columns is used.
-#' @param weights_names TODO, NOT WORKING YET. A named list or character vector with elements named samp, samp1, wgt,
+#' @param weights_names TODO, NOT WORKING YET. A named list or character vector with elements named location, neigh, weight,
 #'                   and values equal to the corresponding column names in data.
 #'                   Defaults to NULL in which case the order of the columns is used.
 #'
@@ -36,15 +36,15 @@
 #' @export
 frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .985, bench_exclude = NULL,
                     data_names = NULL, weights_names = NULL) {
-  samp_id = samp = spec_id = time_id = samp1_id = NULL # To avoid Notes in R CMD check
+  location_id = location = spec_id = time_id = neigh_id = NULL # To avoid Notes in R CMD check
 
   if (is.null(data_names)) {
     data = data[,1:3]
     data_names = colnames(data)
     setDT(data) # Should copy, otherwise may be reordered on return!
-    setnames(data, c("samp", "spec", "time"))
+    setnames(data, c("location", "spec", "time"))
   } else {
-    data_names = match_cols(data, data_names, c("samp", "spec", "time"))
+    data_names = match_cols(data, data_names, c("location", "spec", "time"))
     data = data[, data_names]
     setDT(data)
     setnames(data, names(data_names))
@@ -53,16 +53,16 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
     weights = weights[,1:3]
     weight_names = colnames(weights)
     setDT(weights)
-    setnames(weights, c("samp", "samp1", "wgt"))
+    setnames(weights, c("location", "neigh", "weight"))
   } else {
-    weights_names = match_cols(weights, weights_names, c("samp", "samp1", "wgt"))
+    weights_names = match_cols(weights, weights_names, c("location", "neigh", "weight"))
     weights = weights[, weights_names]
     setDT(weights)
     setnames(weights, names(weights_names))
   }
 
-  stopifnot(setequal(unique(weights$samp), unique(weights$samp1))) # How handle this??
-  sites = data.table(samp = sort(unique(c(weights$samp))))[, samp_id := 1:.N]
+  stopifnot(setequal(unique(weights$location), unique(weights$neigh))) # How handle this??
+  sites = data.table(location = sort(unique(c(weights$location))))[, location_id := 1:.N]
 
   # Argument checking
   if (!is.na(phi_target)) {
@@ -79,11 +79,11 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   }
 
   # Filter sites in data not present in weights
-  exclude_sites = setdiff(unique(data$samp), sites$samp)
+  exclude_sites = setdiff(unique(data$location), sites$location)
   if (length(exclude_sites) > 0) {
     message(paste("Site(s)", paste(exclude_sites, collapse = ", "), "not present in weights, removed."))
   }
-  data =  data[!(samp %in% exclude_sites)]
+  data =  data[!(location %in% exclude_sites)]
 
   # Key tables for species and times
   species = data.table(spec = sort(unique(data$spec)))[, spec_id := 1:.N] # Note: species may have been removed, if only present in excluded sites.
@@ -98,25 +98,25 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   }
 
   # Add keys to weights
-  weights[ , samp_id := sites$samp_id[pmatch(weights$samp, sites$samp ,duplicates.ok = TRUE)]]
-  weights[ , samp1_id := sites$samp_id[pmatch(weights$samp1, sites$samp ,duplicates.ok = TRUE)]]
+  weights[ , location_id := sites$location_id[pmatch(weights$location, sites$location ,duplicates.ok = TRUE)]]
+  weights[ , neigh_id := sites$location_id[pmatch(weights$neigh, sites$location ,duplicates.ok = TRUE)]]
 
   # Add keys to data
   data[ , spec_id := species$spec_id[match(data$spec, species$spec)]]
-  data[ , samp_id := sites$samp_id[match(data$samp, sites$samp)]]
+  data[ , location_id := sites$location_id[match(data$location, sites$location)]]
   data[ , time_id := times$time_id[match(data$time, times$time)]]
 
   # Compute frequency weighted mean frequencies
   freqs = nfcalc(data, weights, sites, species)
   if (is.na(phi_target)) {
-    phi_target = freqs[ , .(phi0 = sum(freq^2)/sum(freq)), by = "samp_id"][, quantile(phi0, prob = phi_prob, names = FALSE)]
+    phi_target = freqs[ , .(phi0 = sum(freq^2)/sum(freq)), by = "location_id"][, quantile(phi0, prob = phi_prob, names = FALSE)]
   }
   nc = nrow(freqs)
   set(freqs, j = c("Freq_1", "SD_Frq1", "rank", "rank1"),
       value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank1 = R´, Hill P200.
-  setkey(freqs, samp_id) # Not needed, minimal improvement if any?
+  setkey(freqs, location_id) # Not needed, minimal improvement if any?
 
-  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(samp_id), .SDcols = c("samp_id", "freq")]
+  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(location_id), .SDcols = c("location_id", "freq")]
 
   # Compute effort per site and time as proportion of benchmarks found.
   sampling_effort = benchmark_proportions(data, freqs, species, Rstar = Rstar, bench_exclude = bench_exclude)
@@ -125,9 +125,9 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   tfs = tfcalc(data, freqs, species, sites, times, sampling_effort)
 
   freqs$species = species$spec[match(freqs$spec_id, species$spec_id)]
-  freqs$samp = sites$samp[match(freqs$samp_id, sites$samp_id)]
+  freqs$location = sites$location[match(freqs$location_id, sites$location_id)]
   freqs$spec_id = NULL
-  freqs$samp_id = NULL
+  freqs$location_id = NULL
 
 
   tfs$species = species$spec[match(tfs$spec_id, species$spec_id)]
@@ -262,7 +262,7 @@ check_phi = function(object, prob = .985, plot = FALSE) {
   if (!all(object$sites$conv.fresca)) {
     conv_fail = !object$sites$conv.fresca
     warning(paste("phi did not converge to phi_target for all sites, increasing max.iter might help. Convergence failed for site(s):",
-                  paste(object$sites$samp[conv_fail], collapse = ", ")))
+                  paste(object$sites$location[conv_fail], collapse = ", ")))
   }
   phi_ok
 }
@@ -300,18 +300,18 @@ check_r = function(object) {
 check_rescaling = function(object, max_sites = 500) {
   scaled = NULL
   if (nrow(object$sites) > max_sites) {
-    keep = object$freqs[["samp"]] %in% sample(object$sites[["samp"]], max_sites)
+    keep = object$freqs[["location"]] %in% sample(object$sites[["location"]], max_sites)
   } else {
     keep = TRUE
   }
-  pldat = object$freqs[keep, c("samp", "rank", "rank1", "freq", "Freq_1")]
+  pldat = object$freqs[keep, c("location", "rank", "rank1", "freq", "Freq_1")]
   setDT(pldat)
   pldat[, rank := as.numeric(rank)]
   pldat = data.table::melt(pldat,
-                           id.vars = "samp", measure.vars = list(freq = c("freq", "Freq_1"), rank = c("rank", "rank1")),
+                           id.vars = "location", measure.vars = list(freq = c("freq", "Freq_1"), rank = c("rank", "rank1")),
                            variable.name = "scaled", variable.factor = FALSE)
   pldat[, scaled := c("unscaled", "rescaled")[as.integer(scaled)]]
-  ggplot(data = pldat, aes(x = .data[["rank"]], y = .data[["freq"]], group = .data[["samp"]])) +
+  ggplot(data = pldat, aes(x = .data[["rank"]], y = .data[["freq"]], group = .data[["location"]])) +
     geom_line(alpha = 100/min(nrow(object$sites), max_sites)) + facet_wrap("scaled", scales = "free_x") + theme_minimal()
 
 }
@@ -341,7 +341,7 @@ occupancy_prob = function(object, species, s = 1) {
   setDT(object$tfs)
   keep_f = which(object$freqs$species %in% species)
   keep_tfs = which(object$tfs$species %in% species)
-  out = merge(object$freqs[keep_f, c("species", "samp", "Freq_1")],
+  out = merge(object$freqs[keep_f, c("species", "location", "Freq_1")],
                           object$tfs[keep_tfs, c("species", "time", "tf")], allow.cartesian = TRUE)
   out[, "p_occ" := 1 - (1 - s * Freq_1)^tf]
   out$tf = NULL
