@@ -36,7 +36,7 @@
 #' @export
 frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .985, bench_exclude = NULL,
                     data_names = NULL, weights_names = NULL) {
-  location_id = location = spec_id = time_id = neigh_id = NULL # To avoid Notes in R CMD check
+  location_id = location = spec_id = time_id = neigh_id = phi0 = freq = NULL # To avoid Notes in R CMD check
 
   if (is.null(data_names)) {
     data = data[,1:3]
@@ -110,7 +110,7 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   # Compute frequency weighted mean frequencies
   freqs = nfcalc(data, weights, sites, species)
   if (is.na(phi_target)) {
-    phi_target = freqs[ , .(phi0 = sum(freq^2)/sum(freq)), by = "location_id"][, quantile(phi0, prob = phi_prob, names = FALSE)]
+    phi_target = freqs[ , list(phi0 = sum(freq^2)/sum(freq)), by = "location_id"][, quantile(phi0, prob = phi_prob, names = FALSE)]
   }
   nc = nrow(freqs)
   set(freqs, j = c("Freq_1", "SD_Frq1", "rank", "rank_scaled"),
@@ -171,6 +171,12 @@ match_cols = function(data, col_names, expected) {
   data_names
 }
 
+#' Summarize frescalo output
+#'
+#' @param object A frescalo object.
+#'
+#' @param ... Other arguments.
+#'
 #' @exportS3Method base::summary
 summary.frescalo = function(object, ...) {
   out = list(call = object$call,
@@ -186,6 +192,8 @@ summary.frescalo = function(object, ...) {
   out
 }
 
+#' @rdname summary.frescalo
+#' @param x An object returned by \code{summary.frescalo}.
 #' @exportS3Method base::print
 print.summary.frescalo = function(x, ...) {
   cat("\nCall:\n")
@@ -328,14 +336,13 @@ check_rescaling = function(object, max_sites = 500) {
 #' @param species A character vector of species names for which to compute probabilities.
 #' @param s Level of effort.
 #'
-#' @returns
+#' @returns A data.frame with estimated occupancy probabilities.
 #'
 #' @note
 #' Estimated probability of occurence under standard effort, sit = 1 meaning all benchmarks found (Bijlsma).
 #' This depends on the proportion of benchmarks (see Prescott 2025).
 #' Note: this is rather probability of detection under a sampling effort sufficient for all benchmarks to be found(?)
 #  By assumption of the frescalo method trends in occupancy probability are identical across sites.
-#' @examples
 #' @export
 occupancy_prob = function(object, species, s = 1) {
   Freq_1 = tf = NULL

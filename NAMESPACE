@@ -3,6 +3,7 @@
 S3method(base::print,summary.frescalo)
 S3method(base::summary,frescalo)
 export(check_rescaling)
+export(dist2df.mat)
 export(euclid_dist)
 export(frequencies)
 export(frescalo)

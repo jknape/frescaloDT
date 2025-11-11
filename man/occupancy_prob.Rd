@@ -13,6 +13,9 @@ occupancy_prob(object, species, s = 1)
 
 \item{s}{Level of effort.}
 }
+\value{
+A data.frame with estimated occupancy probabilities.
+}
 \description{
 Compute estimated occupancy probabilities for a given level of effort.
 }

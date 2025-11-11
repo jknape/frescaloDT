@@ -2,20 +2,22 @@
 % Please edit documentation in R/distance.r
 \name{dist2df.mat}
 \alias{dist2df.mat}
-\title{Convenience function for converting a distance matrix, generated e.g. by dist or vegan::dist
-to a data.frame suitable for the frescalo function.}
+\title{Convert a distance matrix, generated e.g. by dist or vegan::dist
+to a data.frame suitable for the frescalo function. EXPERIMENTAL.}
 \usage{
-dist2df.mat(D, ids = seq_len(nrow(D)))
+dist2df.mat(D, ids = seq_len(nrow(D)), pairs = NULL)
 }
 \arguments{
 \item{D}{Distance matrix}
 
 \item{ids}{Labels or ids for the sites.}
+
+\item{pairs}{A data.frame with pairs of site for which distance should be computed.}
 }
 \value{
 description A data frame with distances between pairs of sites.
 }
 \description{
-Convenience function for converting a distance matrix, generated e.g. by dist or vegan::dist
-to a data.frame suitable for the frescalo function.
+Convert a distance matrix, generated e.g. by dist or vegan::dist
+to a data.frame suitable for the frescalo function. EXPERIMENTAL.
 }

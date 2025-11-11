@@ -4,15 +4,10 @@ library(data.table)
 freqs_fortran = read.table("testdata/freqs.txt", header = TRUE)
 setDT(freqs_fortran)
 
-weights = fread("testdata/weights.txt")
-weights = weights[,1:3]
-setnames(weights, c("location", "neigh", "wgt"))
 
-data = fread("testdata/Test.txt")
-setDF(data)
-setDF(weights)
+data("bryophyte")
 
-fr = frescalo(data, weights)
+fr = frescalo(bryophyte, bryophyte_weights)
 
 # Fortran program is truncating frequencies at 5e-5
 freqs = frequencies(fr)
@@ -66,10 +61,10 @@ expect_lt(max(abs(comp_tfs$esttot - comp_tfs$X___est)), .1)
 
 # TODO: check what happens when there are duplicate records in input
 
-fr2 = frescalo(data[c(1, 1:nrow(data)), ], weights)
+fr2 = frescalo(bryophyte[c(1, 1:nrow(bryophyte)), ], bryophyte_weights)
 
 # TODO: check that order of input doesn't matter
 
-fr2 = frescalo(data[sample(1:nrow(data)), ], weights[sample(1:nrow(weights)),])
+fr2 = frescalo(bryophyte[sample(1:nrow(bryophyte)), ], bryophyte_weights[sample(1:nrow(bryophyte_weights)),])
 
 # TODO: check varying names of input columns

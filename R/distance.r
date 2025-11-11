@@ -12,7 +12,6 @@
 #' The function computes simple euclidian distances. For more accurate results,
 #' use a dedicated function, such as st_dist from the sf package.
 #'
-#' @examples
 #' @export
 euclid_dist = function(data, site, x, y, max_neigh = 200, max_dist = Inf)  {
   max_neigh = min(as.integer(max_neigh), nrow(data))
@@ -52,17 +51,17 @@ neigh_sorensen = function(x, l) {
 }
 
 
-#' Convenience function for converting a distance matrix, generated e.g. by dist or vegan::dist
-#' to a data.frame suitable for the frescalo function.
+#' Convert a distance matrix, generated e.g. by dist or vegan::dist
+#' to a data.frame suitable for the frescalo function. EXPERIMENTAL.
 #'
 #' @param D Distance matrix
 #' @param ids Labels or ids for the sites.
+#' @param pairs A data.frame with pairs of site for which distance should be computed.
 #'
 #' @returns description A data frame with distances between pairs of sites.
-# @export
-#'
-#' @examples
-dist2df.mat <- function(D, ids = seq_len(nrow(D))) {
+#' @export
+dist2df.mat <- function(D, ids = seq_len(nrow(D)), pairs = NULL) {
+  max_neigh = dist_rank = NULL
   n <- nrow(D)
   a <- rep(1L:n, times = n)
   b <- rep(1L:n, each = n)
@@ -70,7 +69,7 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D))) {
   if (!is.null(pairs)) { # This requires first creating full n x n data.frame out. Could be avoided, but indexing gets complicated.
     setDT(pairs)
     setkeyv(pairs, colnames(pairs))
-    setkey(out, "site", "neigh")
+    setkeyv(out, c("site", "neigh"))
     out = out[pairs]
   }
   setorderv(out, c("site", "dist"))
@@ -84,6 +83,7 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D))) {
 
 
 dist2df.dist <- function(D, labels = NULL, max_neigh = 200, pairs = NULL) {
+  dist_rank = NULL
   n <- nrow(D)
   if (is.null(labels)) {
     labels = attr(D, "Labels")
