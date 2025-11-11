@@ -26,7 +26,7 @@ expect_lt(max(abs(comp_frq$freq - comp_frq$Freq__)), 1e-4)
 expect_lt(max(abs(comp_frq$Freq_1 - comp_frq$i.Freq_1)), 1e-4)
 expect_lt(max(abs(comp_frq$SD_Frq1 - comp_frq$i.SD_Frq1)), 1e-4)
 expect_lt(max(abs(comp_frq$rank - comp_frq$Rank)), 3)
-expect_lt(max(abs(comp_frq$rank1 - comp_frq$Rank_1)), .02)
+expect_lt(max(abs(comp_frq$rank_scaled - comp_frq$Rank_1)), .02)
 
 
 # Time factors

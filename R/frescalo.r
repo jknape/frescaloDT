@@ -13,10 +13,10 @@
 #'                 If \code{phi_target} is set to NA, the quantile corresponding to \code{phi_prob} is taken as the target.
 #'                 Defaults to 0.985.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
-#' @param data_names TODO, NOT WORKING YET. A named list or character vector with elements named location, spec, time,
+#' @param data_names  A named list or character vector with elements named location, spec, time,
 #'                   and values equal to the corresponding column names in data.
 #'                   Defaults to NULL in which case the order of the columns is used.
-#' @param weights_names TODO, NOT WORKING YET. A named list or character vector with elements named location, neigh, weight,
+#' @param weights_names A named list or character vector with elements named location, neigh, weight,
 #'                   and values equal to the corresponding column names in data.
 #'                   Defaults to NULL in which case the order of the columns is used.
 #'
@@ -42,13 +42,14 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
     data = data[,1:3]
     data_names = colnames(data)
     setDT(data) # Should copy, otherwise may be reordered on return!
-    setnames(data, c("location", "spec", "time"))
+    setnames(data, c("location", "species", "time"))
   } else {
-    data_names = match_cols(data, data_names, c("location", "spec", "time"))
+    data_names = match_cols(data, data_names, c("location", "species", "time"))
     data = data[, data_names]
     setDT(data)
     setnames(data, names(data_names))
   }
+  data = data[!duplicated(data)]
   if (is.null(weights_names)) {
     weights = weights[,1:3]
     weight_names = colnames(weights)
@@ -77,7 +78,6 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   if (Rstar < 0) {
      stop("Argument Rstar should be positive.")
   }
-
   # Filter sites in data not present in weights
   exclude_sites = setdiff(unique(data$location), sites$location)
   if (length(exclude_sites) > 0) {
@@ -86,11 +86,11 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   data =  data[!(location %in% exclude_sites)]
 
   # Key tables for species and times
-  species = data.table(spec = sort(unique(data$spec)))[, spec_id := 1:.N] # Note: species may have been removed, if only present in excluded sites.
+  species = data.table(species = sort(unique(data$species)))[, spec_id := 1:.N] # Note: species may have been removed, if only present in excluded sites.
   times = data.table(time = sort(unique(data$time)))[, time_id := 1:.N]
 
   if (length(bench_exclude) > 0) {
-    bm = match(bench_exclude, species$spec, nomatch = 0)
+    bm = match(bench_exclude, species$species, nomatch = 0)
     if (sum(bm == 0) > 0) {
       writeLines(paste("Species", paste(bench_exclude[bm == 0], collapse = ", "), "to exclude from benchmarks not found, ignored."))
     }
@@ -102,7 +102,8 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   weights[ , neigh_id := sites$location_id[pmatch(weights$neigh, sites$location ,duplicates.ok = TRUE)]]
 
   # Add keys to data
-  data[ , spec_id := species$spec_id[match(data$spec, species$spec)]]
+  sp_id = species$spec_id[match(data$species, species$species)]
+  data[ , spec_id := sp_id]
   data[ , location_id := sites$location_id[match(data$location, sites$location)]]
   data[ , time_id := times$time_id[match(data$time, times$time)]]
 
@@ -112,11 +113,11 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
     phi_target = freqs[ , .(phi0 = sum(freq^2)/sum(freq)), by = "location_id"][, quantile(phi0, prob = phi_prob, names = FALSE)]
   }
   nc = nrow(freqs)
-  set(freqs, j = c("Freq_1", "SD_Frq1", "rank", "rank1"),
-      value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank1 = R´, Hill P200.
+  set(freqs, j = c("Freq_1", "SD_Frq1", "rank", "rank_scaled"),
+      value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank_scaled = R´, Hill P200.
   setkey(freqs, location_id) # Not needed, minimal improvement if any?
 
-  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank1") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(location_id), .SDcols = c("location_id", "freq")]
+  freqs[, c("Freq_1", "SD_Frq1", "rank", "rank_scaled") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(location_id), .SDcols = c("location_id", "freq")]
 
   # Compute effort per site and time as proportion of benchmarks found.
   sampling_effort = benchmark_proportions(data, freqs, species, Rstar = Rstar, bench_exclude = bench_exclude)
@@ -124,17 +125,18 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   # Compute time factors.
   tfs = tfcalc(data, freqs, species, sites, times, sampling_effort)
 
-  freqs$species = species$spec[match(freqs$spec_id, species$spec_id)]
+  freqs$species = species$species[match(freqs$spec_id, species$spec_id)]
   freqs$location = sites$location[match(freqs$location_id, sites$location_id)]
   freqs$spec_id = NULL
   freqs$location_id = NULL
+  setcolorder(freqs, c("location", "species",  "observed", "freq", "Freq_1", "SD_Frq1", "rank", "rank_scaled"))
 
-
-  tfs$species = species$spec[match(tfs$spec_id, species$spec_id)]
+  tfs$species = species$species[match(tfs$spec_id, species$spec_id)]
   tfs$spec_id = NULL
   tfs$time = times$time[match(tfs$time_id, times$time_id)]
   tfs$time_id = NULL
   setcolorder(tfs, c("species", "time", "tf", "tf_se", "n_obs", "sptot", "esttot"))
+
   setDF(freqs) # Allows copy on modify while avoiding risk of changing frescalo object when returning via frequencies()
   setDF(tfs)
   out = list(call = match.call(),
@@ -270,7 +272,7 @@ check_phi = function(object, prob = .985, plot = FALSE) {
 
 # Is this meaningful?
 check_r = function(object) {
-  graphics::hist(object$freqs$rank1, xlab = "R", main = "")
+  graphics::hist(object$freqs$rank_scaled, xlab = "R", main = "")
   graphics::abline(v = object$Rstar, col = "red")
 }
 
@@ -304,11 +306,11 @@ check_rescaling = function(object, max_sites = 500) {
   } else {
     keep = TRUE
   }
-  pldat = object$freqs[keep, c("location", "rank", "rank1", "freq", "Freq_1")]
+  pldat = object$freqs[keep, c("location", "rank", "rank_scaled", "freq", "Freq_1")]
   setDT(pldat)
   pldat[, rank := as.numeric(rank)]
   pldat = data.table::melt(pldat,
-                           id.vars = "location", measure.vars = list(freq = c("freq", "Freq_1"), rank = c("rank", "rank1")),
+                           id.vars = "location", measure.vars = list(freq = c("freq", "Freq_1"), rank = c("rank", "rank_scaled")),
                            variable.name = "scaled", variable.factor = FALSE)
   pldat[, scaled := c("unscaled", "rescaled")[as.integer(scaled)]]
   ggplot(data = pldat, aes(x = .data[["rank"]], y = .data[["freq"]], group = .data[["location"]])) +

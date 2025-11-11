@@ -51,9 +51,9 @@ nfcalc = function(data, weights, sites, species, return_type = "dt") {
       set(sites, j = "occ_ind", value = occ_ind)
       return(ffij)
   }
-  freqs = data.table(location_id = rep(1:nrow(ffij), ncol(ffij)), spec_id = rep(1:ncol(ffij), each = nrow(ffij)), freq = as.vector(ffij), pres = 0L)
+  freqs = data.table(location_id = rep(1:nrow(ffij), ncol(ffij)), spec_id = rep(1:ncol(ffij), each = nrow(ffij)), freq = as.vector(ffij), observed = FALSE)
   pind = do.call(c, mapply(function(j,i) {i + (j-1L)*nrow(ffij)} , occ_ind, 1:nrow(ffij)))
-  set(freqs, i = pind, j = "pres", 1L)
+  set(freqs, i = pind, j = "observed", TRUE)
 
   #if(!identical(freqs[samp_id == 114 & pres]$spec_id, sort(occ_ind[[114]]))) {
   #  browser()

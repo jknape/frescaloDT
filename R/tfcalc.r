@@ -1,10 +1,10 @@
 benchmark_proportions = function(data, freqs, species, Rstar = .27, bench_exclude = NULL) {
-  location_id = spec_id = time_id = rank1 = bench = nbench = Freq_1 = bwght = spec = NULL # To avoid Notes in R CMD check
+  location_id = spec_id = time_id = rank_scaled = bench = nbench = Freq_1 = bwght = spec = NULL # To avoid Notes in R CMD check
 
   species[, bwght := 1]
   species[spec %in% bench_exclude, bwght := .001]
 
-  bench_prop = species[freqs, list(location_id, spec_id, bench = bwght * (rank1 < Rstar | rank == 1)), on = "spec_id"][, nbench := sum(bench), by = "location_id"]
+  bench_prop = species[freqs, list(location_id, spec_id, bench = bwght * (rank_scaled < Rstar | rank == 1)), on = "spec_id"][, nbench := sum(bench), by = "location_id"]
 
   bench_prop = bench_prop[data, list(location_id, spec_id, time_id, bench, nbench), on = c("location_id", "spec_id")][, list(samp_eff = sum(bench)/nbench[1]), by = list(location_id, time_id)]
   setorderv(bench_prop, cols = c("location_id", "time_id"))
@@ -12,7 +12,7 @@ benchmark_proportions = function(data, freqs, species, Rstar = .27, bench_exclud
 }
 
 tfcalc = function(data, freqs, species, sites, times, sampeff) {
-  location_id = spec_id = time_id = rank1 = Freq_1 = spec = NULL # To avoid Notes in R CMD check
+  location_id = spec_id = time_id = rank_scaled = Freq_1 = spec = NULL # To avoid Notes in R CMD check
 
   iocc = data.table(spec_id = rep(species$spec_id, each = nrow(times)), time_id = rep(times$time_id, nrow(species)))
   iocc0 = data[, list(occ = list(location_id)), by = list(spec_id, time_id)]
