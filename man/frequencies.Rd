@@ -18,5 +18,5 @@ Extract species frequencies from a frescalo object.
 \examples{
 data(bryophyte)
 fr = frescalo(bryophyte, bryophyte_weights)
-frequencies(fr)
+head(frequencies(fr))
 }

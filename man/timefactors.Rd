@@ -18,5 +18,5 @@ Extract time factors from a frescalo object.
 \examples{
 data(bryophyte)
 fr = frescalo(bryophyte, bryophyte_weights)
-timefactors(fr)
+head(timefactors(fr))
 }

@@ -31,8 +31,8 @@
 #' data(bryophyte)
 #' fr = frescalo(bryophyte, bryophyte_weights)
 #' summary(fr)
-#' frequencies(fr)
-#' timefactors(fr)
+#' head(frequencies(fr))
+#' head(timefactors(fr))
 #' @export
 frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .985, bench_exclude = NULL,
                     data_names = NULL, weights_names = NULL) {
@@ -228,7 +228,7 @@ print.summary.frescalo = function(x, ...) {
 #' @examples
 #' data(bryophyte)
 #' fr = frescalo(bryophyte, bryophyte_weights)
-#' frequencies(fr)
+#' head(frequencies(fr))
 #' @export
 frequencies = function(object) {
   # freqs = object$freqs # Results in additional copy of large table.
@@ -248,7 +248,7 @@ frequencies = function(object) {
 #' @examples
 #' data(bryophyte)
 #' fr = frescalo(bryophyte, bryophyte_weights)
-#' timefactors(fr)
+#' head(timefactors(fr))
 #' @export
 timefactors = function(object) {
   #if (is.null(object$tfs)) {
@@ -305,7 +305,7 @@ check_r = function(object) {
 #' @examples
 #' data(bryophyte)
 #' fr = frescalo(bryophyte, bryophyte_weights)
-#' check_rescaling(fr)
+#' check_rescaling(fr, max_sites = 50)
 #' @export
 check_rescaling = function(object, max_sites = 500) {
   scaled = NULL

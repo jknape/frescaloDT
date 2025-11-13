@@ -57,6 +57,6 @@ to avoid divisions by zero or other issues that can cause the algorithm to other
 data(bryophyte)
 fr = frescalo(bryophyte, bryophyte_weights)
 summary(fr)
-frequencies(fr)
-timefactors(fr)
+head(frequencies(fr))
+head(timefactors(fr))
 }
