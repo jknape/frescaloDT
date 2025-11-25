@@ -17,7 +17,7 @@ euclid_dist(data, site, x, y, max_neigh = 200, max_dist = Inf)
 
 \item{max_neigh}{The largest number of neighbours to keep. Defaults to keeping the 200 closest neighbours of each site.}
 
-\item{max_dist}{Distances larger than this are ignored in the output. Not applied by default.}
+\item{max_dist}{Distances larger than this are omitted in the output. Not applied by default.}
 }
 \value{
 A data frame with distances.

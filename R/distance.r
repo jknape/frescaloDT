@@ -5,7 +5,7 @@
 #' @param x Name of column containing x coordinate.
 #' @param y Name of column containing y coordinate.
 #' @param max_neigh The largest number of neighbours to keep. Defaults to keeping the 200 closest neighbours of each site.
-#' @param max_dist Distances larger than this are ignored in the output. Not applied by default.
+#' @param max_dist Distances larger than this are omitted in the output. Not applied by default.
 #'
 #' @returns A data frame with distances.
 #'
@@ -82,32 +82,28 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D)), pairs = NULL) {
 }
 
 
-dist2df.dist <- function(D, labels = NULL, max_neigh = 200, pairs = NULL) {
-  dist_rank = NULL
-  n <- nrow(D)
+eco_dist <- function(x, labels, max_neigh = 200, pairs = NULL, method = 4) {
+  n <- nrow(x)
   if (is.null(labels)) {
     labels = attr(D, "Labels")
   }
   if (is.null(labels)) {
     labels = seq_len(n)
   }
-  a = rep(1L:n, times = n:1)
-  b = sequence(n:1L) + rep(0L:(n-1L), n:1L)
-  self = seq(1, by = n+1, l = n) - cumsum(c(0,1:(n-1)))
-  # Include reverse distances, larger data frame needed, but necessary to compute ranks.
-  a_temp = c(a, b[-self])
-  b = c(b, a[-self])
-  a = a_temp
-  out = data.table(site = labels[a], neigh = labels[b], dist = numeric(length(a)))
-  out$dist[-self] = D # D recycled, could also use = c(D, D)
-  if (!is.null(pairs)) { # This requires first creating full n x n data.frame out. Could be avoided, but indexing gets complicated.
-    setDT(pairs)
-    setkeyv(pairs, colnames(pairs))
-    setkeyv(out, c("site", "neigh"))
-    out = out[pairs]
+  stopifnot(identical(nrow(x), length(labels)))
+  if (is.null(pairs)) {
+    out = data.frame(site = rep(labels, each = length(labels)), neigh = rep(labels, length(labels)))
+  } else {
+    out = data.frame(site = pairs[,1], neigh = pairs[,2])
   }
-  setorderv(out, c("site", "dist"))
-  out[, dist_rank := 1:.N, by = "site"]
+  ind_mat = cbind(match(out$site, labels), match(out$neigh, labels))
+  if (any(is.na(ind_mat))) {
+    stop("All elements in pairs not found in labels.")
+  }
+  out$dist = vegd_test_p(as.matrix(x), ind_mat, method)
+  setDT(out)
+  setorderv(out, c("site", "dist", "neigh"))
+  out[, "dist_rank" := 1:.N, by = "site"]
   if (max_neigh < n) {
     out = out[dist_rank <= max_neigh]
   }
@@ -122,40 +118,20 @@ neig_weights.data.frame = function(data) {}
 
 neigh_weights.matrix = function(s_dist) {}
 
+#' @useDynLib frescaloDT, .registration = TRUE
+NULL
 
-sorensen_dist = function(data, site, vars, max_neigh = 200)  {
-  max_neigh = min(as.integer(max_neigh), nrow(data))
-  browser()
-  dists = apply(data, 1, function(row) {ds =  sorensen_dist1(unlist(row[vars]), data[vars])
-                                        n = min(max_neigh, length(ds));
-                                        ds = sort(ds, index.return = TRUE, method = "quick");
-                                        list(ds$ix[1:max_neigh], ds$x[1:max_neigh], 1:max_neigh)})
-  n = sapply(dists, function(l) {length(l[[1]])})
-  ntot = sum(n)
-  out = data.frame(from = rep(data[[site]], times = n))
-  out$to =   do.call(c, lapply(dists, function(l) {data[[site]][l[[1]]]}))
-  out$dist =   do.call(c, lapply(dists, function(l) {l[[2]]}))
-  out$dist_rank =   do.call(c, lapply(dists, function(l) {l[[3]]}))
-  out
+
+#'@export
+vegd_test_p = function(x, pairs, method = 4) {
+  nr = nrow(x)
+  stopifnot(ncol(pairs) == 2)
+  pairs = as.integer(pairs)
+  stopifnot(all(pairs > 0) & all(pairs <= nr))
+  d = .Call("do_vegdist_p", x, pairs, as.integer(method))
+  d[d < 1e-15] = 0
+  d
 }
-
-
-
-sorensen_dist1 <- function(v, mat) {
-  n <- nrow(mat); p <- ncol(mat)
-  stopifnot(length(v) == p)
-  if (n == 0) return(matrix(0, 0, 0))
-  # row-wise sums required for denominator
-  row_sums <- rowSums(mat)
-  num <- matrix(0,1,n)
-  for (k in seq_len(p)) {
-    colk <- mat[, k]
-    num = num + outer(v[k], colk, pmin)
-  }
-  denom <- sum(v) + rowSums(mat)
-  as.numeric(1 - 2 * num / denom)
-}
-
 
 #sdist = sorensen_dist(grid, "gid", c("c_lat", "c_lon"), max_neigh = 100)
 
