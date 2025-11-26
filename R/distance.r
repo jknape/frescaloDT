@@ -82,29 +82,57 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D)), pairs = NULL) {
 }
 
 
-eco_dist <- function(x, labels, max_neigh = 200, pairs = NULL, method = 4) {
+#' Compute ecological similarity between pairs of sites.
+#'
+#' @param x A numeric matrix with
+#' @param labels A vector of names of the sites. Should have length equal to the number of rows in x. If NULL, the row names of x are taken as labels.
+#' @param max_neigh The maximum number of of neighbours to keep from each site. The closest neighbours are kept.
+#' @param include A two column matrix or data frame, or a list with two vectors, that specify a subset of pairs of sites for which to compute distances.
+#'                Elements need to match the labels.
+#'                Useful when there are many sites which would lead to very large complete distance matrices.
+#' @param method Methods used to compute distances. A subset of the methods available for vegdist in package vegan can be used.
+#'
+#' @returns A data frame with pairwise distances and their within site ranks.
+#'
+#' @note
+#' Underlying C code for distance computations based on code from the vegdist function in the vegan package.
+#' The original code is modified mainly to avoid the need to compute full distance matrices corresponding to all pairs of sites.
+#' @export
+#' @examples
+#' # Simulate distances
+#' X = exp(matrix(rnorm(30), ncol = 5))
+#' # Keep the two neighbours closest to each site:
+#' eco_dist(X, max_neigh = 2)
+#' # Compute distances from site 1 to sites 2, 3 and 4:
+#' eco_dist(X, include = list(c(1,1,1), 2:4))
+eco_dist <- function(x, labels = NULL, max_neigh = 200, include = NULL, method = "bray") {
   n <- nrow(x)
   if (is.null(labels)) {
-    labels = attr(D, "Labels")
+    labels = rownames(x)
   }
   if (is.null(labels)) {
     labels = seq_len(n)
   }
   stopifnot(identical(nrow(x), length(labels)))
-  if (is.null(pairs)) {
+  if (is.null(include)) {
     out = data.frame(site = rep(labels, each = length(labels)), neigh = rep(labels, length(labels)))
   } else {
-    out = data.frame(site = pairs[,1], neigh = pairs[,2])
+    if (is.matrix(include)) {
+      out = data.frame(site = include[,1], neigh = include[,2])
+    } else {
+      out = data.frame(site = include[[1]], neigh = include[[2]])
+    }
   }
   ind_mat = cbind(match(out$site, labels), match(out$neigh, labels))
   if (any(is.na(ind_mat))) {
-    stop("All elements in pairs not found in labels.")
+    stop("All elements in include not found in labels.")
   }
-  out$dist = vegd_test_p(as.matrix(x), ind_mat, method)
+  out$dist = vegd_p(as.matrix(x), ind_mat, method)
   setDT(out)
   setorderv(out, c("site", "dist", "neigh"))
   out[, "dist_rank" := 1:.N, by = "site"]
   if (max_neigh < n) {
+    dist_rank = NULL
     out = out[dist_rank <= max_neigh]
   }
   setDF(out)
@@ -122,16 +150,86 @@ neigh_weights.matrix = function(s_dist) {}
 NULL
 
 
-#'@export
-vegd_test_p = function(x, pairs, method = 4) {
+vegd_p = function(x, pairs, method = "bray") {
+  x = as.matrix(x)
   nr = nrow(x)
+  method = get_dist_method(x, method)
   stopifnot(ncol(pairs) == 2)
   pairs = as.integer(pairs)
   stopifnot(all(pairs > 0) & all(pairs <= nr))
   d = .Call("do_vegdist_p", x, pairs, as.integer(method))
-  d[d < 1e-15] = 0
+  d[d < .Machine$double.eps] = 0
+  if (any(is.na(d)))
+    warning("missing values in results")
   d
 }
 
-#sdist = sorensen_dist(grid, "gid", c("c_lat", "c_lon"), max_neigh = 100)
 
+
+# Adapted from vegan::vegdist
+get_dist_method  = function (x, method = "bray", na.rm = FALSE) {
+    if (!is.na(pmatch(method, "euclidian")))
+      method <- "euclidean"
+    ## the order of METHODS below *MUST* match the #define'd numbers
+    ## in vegdist.c
+    METHODS <- c("manhattan", "euclidean", "canberra", "bray", # 4
+                 "kulczynski", "gower", "morisita", "horn", #8
+                 "mountford", "jaccard", "raup", "binomial", "chao", #13
+                 "altGower", "cao", "mahalanobis", "clark", "chisq", "chord", #19
+                 "hellinger", "aitchison", "robust.aitchison") # 22
+    method <- pmatch(method, METHODS)
+    if (method %in% c(6, 16, 18, 21, 22)) {
+      stop(paste("method", METHODS[method], "not available."))
+    }
+    inm <- METHODS[method]
+    if (is.na(method))
+      stop("invalid distance method")
+    if (method == -1)
+      stop("ambiguous distance method")
+    if (!na.rm && anyNA(x))
+      stop("missing values are not allowed with argument 'na.rm = FALSE'")
+    ## all vegdist indices need numeric data (Gower included).
+    if (!(is.numeric(x) || is.logical(x)))
+      stop("input data must be numeric")
+
+    if (!method %in% c(1,2,6,16,18) && any(rowSums(x, na.rm = TRUE) == 0))
+      warning("you have empty rows: their dissimilarities may be
+                 meaningless in method ",
+              dQuote(inm))
+    ## 1 manhattan, 2 euclidean, 3 canberra, 6 gower, 16 mahalanobis, 19 chord
+    if (!method %in% c(1,2,3,6,16,19,20) && any(x < 0, na.rm = TRUE))
+      warning("results may be meaningless because data have negative entries
+                 in method ",
+              dQuote(inm))
+    if (method %in% c(11,18) && any(colSums(x) == 0, na.rm = TRUE))
+      warning("data have empty species which influence the results in
+                 method ",
+              dQuote(inm))
+    #if (method == 6) # gower, but no altGower
+    #  x <- decostand(x, "range", 2, na.rm = TRUE, ...)
+    #if (method == 16) # mahalanobis
+    #  x <- veganMahatrans(scale(x, scale = FALSE), na.rm = na.rm)
+    #if (method == 18) # chisq
+    #  x <- decostand(x, "chi.square", na.rm = na.rm)
+    #if (method == 21)  # aitchison
+    #  x <- decostand(x, "clr", ...)  # dots to pass possible pseudocount
+    #if (method == 22)  # robust.aitchison
+    #  x <- decostand(x, "rclr", na.rm = na.rm, ...) # No pseudocount for rclr
+    N <- nrow(x)
+    if (method %in% c(7, 13, 15) && !isTRUE(all.equal(x, round(x))))
+      warning("results may be meaningless with non-integer data in method ",
+              dQuote(inm))
+    if (method %in% 7) { # morisita
+      if (any(x[x>0] < 1))
+        warning("results may be meaningless with positive values < 1 in ",
+                dQuote(inm))
+      if (round(max(x)) == 1)
+        warning("results may be meaningless with largest integer 1 in ",
+                dQuote(inm))
+      else if (any(r1 <- apply(x, 1, max) <= 1))
+        warning(dQuote(inm),
+                " expects some counts > 1, none in row(s) ",
+                paste(which(r1), collapse=", "))
+    }
+    method
+}
