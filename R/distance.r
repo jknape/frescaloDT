@@ -82,9 +82,9 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D)), pairs = NULL) {
 }
 
 
-#' Compute ecological similarity between pairs of sites.
+#' Compute ecological or habitat similarity between pairs of sites.
 #'
-#' @param x A numeric matrix with
+#' @param x A numeric matrix with positive entries representing for example abundances of different species (columns) or amount or proportions of habitat classes.
 #' @param labels A vector of names of the sites. Should have length equal to the number of rows in x. If NULL, the row names of x are taken as labels.
 #' @param max_neigh The maximum number of of neighbours to keep from each site. The closest neighbours are kept.
 #' @param include A two column matrix or data frame, or a list with two vectors, that specify a subset of pairs of sites for which to compute distances.
