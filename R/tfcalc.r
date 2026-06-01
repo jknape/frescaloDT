@@ -2,10 +2,8 @@ benchmark_proportions = function(data, freqs, species, Rstar = .27, bench_exclud
   location_id = spec_id = time_id = rank_scaled = bench = nbench = Freq_1 = bwght = spec = NULL # To avoid Notes in R CMD check
 
   species[, bwght := 1]
-  species[spec %in% bench_exclude, bwght := .001]
-
+  species[species %in% bench_exclude, bwght := .001]
   bench_prop = species[freqs, list(location_id, spec_id, bench = bwght * (rank_scaled < Rstar | rank == 1)), on = "spec_id"][, nbench := sum(bench), by = "location_id"]
-
   bench_prop = bench_prop[data, list(location_id, spec_id, time_id, bench, nbench), on = c("location_id", "spec_id")][, list(samp_eff = sum(bench)/nbench[1]), by = list(location_id, time_id)]
   setorderv(bench_prop, cols = c("location_id", "time_id"))
   bench_prop

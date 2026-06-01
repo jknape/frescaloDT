@@ -2,12 +2,12 @@
 % Please edit documentation in R/distance.r
 \name{eco_dist}
 \alias{eco_dist}
-\title{Compute ecological similarity between pairs of sites.}
+\title{Compute ecological or habitat similarity between pairs of sites.}
 \usage{
 eco_dist(x, labels = NULL, max_neigh = 200, include = NULL, method = "bray")
 }
 \arguments{
-\item{x}{A numeric matrix with}
+\item{x}{A numeric matrix with positive entries representing for example abundances of different species (columns) or amount or proportions of habitat classes.}
 
 \item{labels}{A vector of names of the sites. Should have length equal to the number of rows in x. If NULL, the row names of x are taken as labels.}
 
@@ -23,7 +23,7 @@ Useful when there are many sites which would lead to very large complete distanc
 A data frame with pairwise distances and their within site ranks.
 }
 \description{
-Compute ecological similarity between pairs of sites.
+Compute ecological or habitat similarity between pairs of sites.
 }
 \note{
 Underlying C code for distance computations based on code from the vegdist function in the vegan package.
