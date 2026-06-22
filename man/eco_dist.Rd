@@ -26,7 +26,7 @@ A data frame with pairwise distances and their within site ranks.
 Compute ecological or habitat similarity between pairs of sites.
 }
 \note{
-Underlying C code for distance computations based on code from the vegdist function in the vegan package.
+Underlying C code for distance computations is based on code from the vegdist function in the vegan package.
 The original code is modified mainly to avoid the need to compute full distance matrices corresponding to all pairs of sites.
 }
 \examples{

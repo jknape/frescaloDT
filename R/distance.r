@@ -1,54 +1,54 @@
-#' Compute euclidean distances and their ranks coordinates.
-#'
-#' @param data A data frame with site names and x and y coordinates.
-#' @param site Name of column with site/location name or id.
-#' @param x Name of column containing x coordinate.
-#' @param y Name of column containing y coordinate.
-#' @param max_neigh The largest number of neighbours to keep. Defaults to keeping the 200 closest neighbours of each site.
-#' @param max_dist Distances larger than this are omitted in the output. Not applied by default.
-#'
-#' @returns A data frame with distances.
-#'
-#' The function computes simple euclidian distances. For more accurate results,
-#' use a dedicated function, such as st_dist from the sf package.
-#'
-#' @export
-euclid_dist = function(data, site, x, y, max_neigh = 200, max_dist = Inf)  {
-  max_neigh = min(as.integer(max_neigh), nrow(data))
-  dists = apply(data, 1, function(row) {ds =  sqrt((row[[x]] - data[[x]]) ^ 2 + (row[[y]] - data[[y]]) ^ 2)
-                                        if (max_dist < Inf) {ds = ds[ds < max_dist]}
-                                        n = min(max_neigh, length(ds));
-                                        ds = sort(ds, index.return = TRUE, method = "quick");
-  list(ds$ix[1:max_neigh], ds$x[1:max_neigh], 1:max_neigh)})
-  n = sapply(dists, function(l) {length(l[[1]])})
-  ntot = sum(n)
-  out = data.frame(site = rep(data[[site]], times = n))
-  out$neigh =   do.call(c, lapply(dists, function(l) {data[[site]][l[[1]]]}))
-  out$dist =   do.call(c, lapply(dists, `[[`, i = 2))
-  out$dist_rank =   do.call(c, lapply(dists, `[[`, i = 3))
-  out
-}
+# #' Compute euclidean distances and their ranks coordinates.
+# #'
+# #' @param data A data frame with site names and x and y coordinates.
+# #' @param site Name of column with site/location name or id.
+# #' @param x Name of column containing x coordinate.
+# #' @param y Name of column containing y coordinate.
+# #' @param max_neigh The largest number of neighbours to keep. Defaults to keeping the 200 closest neighbours of each site.
+# #' @param max_dist Distances larger than this are omitted in the output. Not applied by default.
+# #'
+# #' @returns A data frame with distances.
+# #'
+# #' The function computes simple euclidian distances. For more accurate results,
+# #' use a dedicated function, such as st_dist from the sf package.
+# #'
+# #' @export
+# euclid_dist = function(data, site, x, y, max_neigh = 200, max_dist = Inf)  {
+#   max_neigh = min(as.integer(max_neigh), nrow(data))
+#   dists = apply(data[,c(x,y)], 1, function(row) {ds =  sqrt((row[[x]] - data[[x]]) ^ 2 + (row[[y]] - data[[y]]) ^ 2)
+#                                         if (max_dist < Inf) {ds = ds[ds < max_dist]}
+#                                         n = min(max_neigh, length(ds));
+#                                         ds = sort(ds, index.return = TRUE, method = "quick");
+#                                         list(ds$ix[1:max_neigh], ds$x[1:max_neigh], 1:max_neigh)})
+#   n = sapply(dists, function(l) {length(l[[1]])})
+#   ntot = sum(n)
+#   out = data.frame(site = rep(data[[site]], times = n))
+#   out$neigh =   do.call(c, lapply(dists, function(l) {data[[site]][l[[1]]]}))
+#   out$dist =   do.call(c, lapply(dists, `[[`, i = 2))
+#   out$dist_rank =   do.call(c, lapply(dists, `[[`, i = 3))
+#   out
+# }
 
-
-similarity = function(data, site, species) {
-  isDT = is.data.table(data)
-  if (!isDT) {
-    setDT(data)
-  }
-  dat = data[, list(splist = list(unique(species))), by = site]
-  if (!isDT) {
-    setDF(data)
-  }
-  sapply(dat$splist[1:2000], l = dat$splist, FUN = neigh_sorensen)
-  #dists = apply(data, 1, function(row) {neigh_sorensen});
-}
-
-neigh_sorensen = function(x, l) {
-  #inters = lapply(l, intersect, x = x)
-  #lapply(l, match, table = x, nomatch = 0)
-  inters = sapply(lapply(l, match, table = x, nomatch = 0), function(x) {sum(x>0)})
-  1 - 2 * inters / (length(x) + sapply(l, length))
-}
+#
+# similarity = function(data, site, species) {
+#   isDT = is.data.table(data)
+#   if (!isDT) {
+#     setDT(data)
+#   }
+#   dat = data[, list(splist = list(unique(species))), by = site]
+#   if (!isDT) {
+#     setDF(data)
+#   }
+#   sapply(dat$splist[1:2000], l = dat$splist, FUN = neigh_sorensen)
+#   #dists = apply(data, 1, function(row) {neigh_sorensen});
+# }
+#
+# neigh_sorensen = function(x, l) {
+#   #inters = lapply(l, intersect, x = x)
+#   #lapply(l, match, table = x, nomatch = 0)
+#   inters = sapply(lapply(l, match, table = x, nomatch = 0), function(x) {sum(x>0)})
+#   1 - 2 * inters / (length(x) + sapply(l, length))
+# }
 
 
 #' Convert a distance matrix, generated e.g. by dist or vegan::dist
@@ -95,7 +95,7 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D)), pairs = NULL) {
 #' @returns A data frame with pairwise distances and their within site ranks.
 #'
 #' @note
-#' Underlying C code for distance computations based on code from the vegdist function in the vegan package.
+#' Underlying C code for distance computations is based on code from the vegdist function in the vegan package.
 #' The original code is modified mainly to avoid the need to compute full distance matrices corresponding to all pairs of sites.
 #' @export
 #' @examples

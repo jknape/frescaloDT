@@ -330,7 +330,7 @@ check_rescaling = function(object, max_sites = 500) {
 
 
 
-#' Compute estimated occupancy probabilities for a given level of effort.
+#' Compute estimated recording probabilities for a given level of effort.
 #'
 #' @param object An object as returned from the frescalo function.
 #' @param species A character vector of species names for which to compute probabilities.
@@ -339,12 +339,12 @@ check_rescaling = function(object, max_sites = 500) {
 #' @returns A data.frame with estimated occupancy probabilities.
 #'
 #' @note
-#' Estimated probability of occurence under standard effort, sit = 1 meaning all benchmarks found (Bijlsma).
+#' Estimated probability of recording species under standard effort, sit = 1 meaning all benchmarks found (Bijlsma).
 #' This depends on the proportion of benchmarks (see Prescott 2025).
 #' Note: this is rather probability of detection under a sampling effort sufficient for all benchmarks to be found(?)
-#  By assumption of the frescalo method trends in occupancy probability are identical across sites.
+#  By assumption of the frescalo method trends in recording probabilities are identical across sites.
 #' @export
-occupancy_prob = function(object, species, s = 1) {
+recording_prob = function(object, species, s = 1) {
   Freq_1 = tf = NULL
   setDT(object$freqs)
   setDT(object$tfs)
