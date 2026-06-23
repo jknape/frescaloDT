@@ -171,6 +171,22 @@ match_cols = function(data, col_names, expected) {
   data_names
 }
 
+match_cols2 = function(data, col_names, required) {
+  parg = deparse1(substitute(col_names))
+  col_names = unlist(col_names)
+  list_names = names(col_names)
+  missing_names = setdiff(required, list_names)
+  if (length(missing_names)>0) {
+    stop(paste0(paste0(missing_names, collapse = ", "), " not found in ", parg))
+  }
+  data_names = colnames(data)
+  missing_cols = setdiff(col_names[required], data_names)
+  if (length(missing_cols) > 0) {
+    stop(paste0("Column(s) ", paste0(missing_cols, collapse = ", ")," listed in ", parg," not found in ", deparse1(substitute(data))))
+  }
+  col_names[match(required, names(col_names))]
+}
+
 #' Summarize frescalo output
 #'
 #' @param object A frescalo object.

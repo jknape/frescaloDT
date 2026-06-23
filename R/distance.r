@@ -51,6 +51,36 @@
 # }
 
 
+
+compute_weights = function(coords, attributes, max_dist = 200, max_sim = 100, cols = NULL) {
+  if (!is.null(cols)) {
+    browser()
+    crd = coords[,match_cols2(coords, cols, c("x", "y"))]
+    site_labs_c = coords[, match_cols2(coords, cols, c("site"))]
+    site_col_att = match_cols2(attributes, cols, c("site"))
+    site_labs_a = attributes[, site_col_att]
+    attrib = attributes[, -match(site_col_att, colnames(attributes))]
+  }
+  browser()
+
+}
+
+
+# Assumes coords, attributes and labels have the same ordering.
+calc_weights = function(coords, attributes, labels, max_dist, max_sim) {
+  euclid_dist = eco_dist(coords, labels = labels, max_neigh = max_dist, method = "euclidean")
+  hab_dist = eco_dist(attributes, labels = labels, max_neigh = max_sim, subset = euclid_dist[,c("site", "neigh")], method = "bray")
+  setDT(euclid_dist)
+  euclid_dist[, dist := NULL]
+  setDT(hab_dist)
+  hab_dist[, dist := NULL]
+  setnames(hab_dist, "dist_rank", "hab_rank")
+  weights = euclid_dist[hab_dist, on = c("site", "neigh")][, weight := (1 - (dist_rank - 1)^2 / max_dist^2)^4 * (1 - (hab_rank - 1)^2 / max_sim^2)^4]
+  weights[, c("dist_rank", "hab_rank") := NULL]
+  weights
+}
+
+
 #' Convert a distance matrix, generated e.g. by dist or vegan::dist
 #' to a data.frame suitable for the frescalo function. EXPERIMENTAL.
 #'
@@ -87,9 +117,8 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D)), pairs = NULL) {
 #' @param x A numeric matrix with positive entries representing for example abundances of different species (columns) or amount or proportions of habitat classes.
 #' @param labels A vector of names of the sites. Should have length equal to the number of rows in x. If NULL, the row names of x are taken as labels.
 #' @param max_neigh The maximum number of of neighbours to keep from each site. The closest neighbours are kept.
-#' @param include A two column matrix or data frame, or a list with two vectors, that specify a subset of pairs of sites for which to compute distances.
+#' @param subset A two column matrix or data frame, or a list with two vectors, that specify a subset of pairs of sites for which to compute distances.
 #'                Elements need to match the labels.
-#'                Useful when there are many sites which would lead to very large complete distance matrices.
 #' @param method Methods used to compute distances. A subset of the methods available for vegdist in package vegan can be used.
 #'
 #' @returns A data frame with pairwise distances and their within site ranks.
@@ -104,8 +133,8 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D)), pairs = NULL) {
 #' # Keep the two neighbours closest to each site:
 #' eco_dist(X, max_neigh = 2)
 #' # Compute distances from site 1 to sites 2, 3 and 4:
-#' eco_dist(X, include = list(c(1,1,1), 2:4))
-eco_dist <- function(x, labels = NULL, max_neigh = 200, include = NULL, method = "bray") {
+#' eco_dist(X, subset = list(c(1,1,1), 2:4))
+eco_dist <- function(x, labels = NULL, max_neigh = 200, subset = NULL, method = "bray") {
   n <- nrow(x)
   if (is.null(labels)) {
     labels = rownames(x)
@@ -114,18 +143,18 @@ eco_dist <- function(x, labels = NULL, max_neigh = 200, include = NULL, method =
     labels = seq_len(n)
   }
   stopifnot(identical(nrow(x), length(labels)))
-  if (is.null(include)) {
+  if (is.null(subset)) {
     out = data.frame(site = rep(labels, each = length(labels)), neigh = rep(labels, length(labels)))
   } else {
-    if (is.matrix(include)) {
-      out = data.frame(site = include[,1], neigh = include[,2])
+    if (is.matrix(subset)) {
+      out = data.frame(site = subset[,1], neigh = subset[,2])
     } else {
-      out = data.frame(site = include[[1]], neigh = include[[2]])
+      out = data.frame(site = subset[[1]], neigh = subset[[2]])
     }
   }
   ind_mat = cbind(match(out$site, labels), match(out$neigh, labels))
   if (any(is.na(ind_mat))) {
-    stop("All elements in include not found in labels.")
+    stop("All elements in subset not found in labels.")
   }
   out$dist = vegd_p(as.matrix(x), ind_mat, method)
   setDT(out)
