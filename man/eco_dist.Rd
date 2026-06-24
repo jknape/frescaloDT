@@ -4,7 +4,7 @@
 \alias{eco_dist}
 \title{Compute ecological or habitat similarity between pairs of sites.}
 \usage{
-eco_dist(x, labels = NULL, max_neigh = 200, include = NULL, method = "bray")
+eco_dist(x, labels = NULL, max_neigh = 200, subset = NULL, method = "bray")
 }
 \arguments{
 \item{x}{A numeric matrix with positive entries representing for example abundances of different species (columns) or amount or proportions of habitat classes.}
@@ -13,9 +13,8 @@ eco_dist(x, labels = NULL, max_neigh = 200, include = NULL, method = "bray")
 
 \item{max_neigh}{The maximum number of of neighbours to keep from each site. The closest neighbours are kept.}
 
-\item{include}{A two column matrix or data frame, or a list with two vectors, that specify a subset of pairs of sites for which to compute distances.
-Elements need to match the labels.
-Useful when there are many sites which would lead to very large complete distance matrices.}
+\item{subset}{A two column matrix or data frame, or a list with two vectors, that specify a subset of pairs of sites for which to compute distances.
+Elements need to match the labels.}
 
 \item{method}{Methods used to compute distances. A subset of the methods available for vegdist in package vegan can be used.}
 }
@@ -35,5 +34,5 @@ X = exp(matrix(rnorm(30), ncol = 5))
 # Keep the two neighbours closest to each site:
 eco_dist(X, max_neigh = 2)
 # Compute distances from site 1 to sites 2, 3 and 4:
-eco_dist(X, include = list(c(1,1,1), 2:4))
+eco_dist(X, subset = list(c(1,1,1), 2:4))
 }

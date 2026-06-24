@@ -41,24 +41,24 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   if (is.null(data_names)) {
     data = data[,1:3]
     data_names = colnames(data)
-    setDT(data) # Should copy, otherwise may be reordered on return!
+    data = data.table::as.data.table(data) # Should copy, otherwise may be reordered on return!
     setnames(data, c("location", "species", "time"))
   } else {
     data_names = match_cols(data, data_names, c("location", "species", "time"))
     data = data[, data_names]
-    setDT(data)
+    data = data.table::as.data.table(data)
     setnames(data, names(data_names))
   }
   data = data[!duplicated(data)]
   if (is.null(weights_names)) {
     weights = weights[,1:3]
     weight_names = colnames(weights)
-    setDT(weights)
+    weights = data.table::as.data.table(weights)
     setnames(weights, c("location", "neigh", "weight"))
   } else {
     weights_names = match_cols(weights, weights_names, c("location", "neigh", "weight"))
     weights = weights[, weights_names]
-    setDT(weights)
+    weights = data.table::as.data.table(weights)
     setnames(weights, names(weights_names))
   }
 
@@ -184,7 +184,7 @@ match_cols2 = function(data, col_names, required) {
   if (length(missing_cols) > 0) {
     stop(paste0("Column(s) ", paste0(missing_cols, collapse = ", ")," listed in ", parg," not found in ", deparse1(substitute(data))))
   }
-  col_names[match(required, names(col_names))]
+  match(col_names[match(required, names(col_names))], data_names)
 }
 
 #' Summarize frescalo output
@@ -331,7 +331,7 @@ check_rescaling = function(object, max_sites = 500) {
     keep = TRUE
   }
   pldat = object$freqs[keep, c("location", "rank", "rank_scaled", "freq", "Freq_1")]
-  setDT(pldat)
+  pldat = data.table::as.data.table(pldat)
   pldat[, rank := as.numeric(rank)]
   pldat = data.table::melt(pldat,
                            id.vars = "location", measure.vars = list(freq = c("freq", "Freq_1"), rank = c("rank", "rank_scaled")),

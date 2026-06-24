@@ -53,16 +53,33 @@
 
 
 compute_weights = function(coords, attributes, max_dist = 200, max_sim = 100, cols = NULL) {
-  if (!is.null(cols)) {
-    browser()
-    crd = coords[,match_cols2(coords, cols, c("x", "y"))]
-    site_labs_c = coords[, match_cols2(coords, cols, c("site"))]
-    site_col_att = match_cols2(attributes, cols, c("site"))
-    site_labs_a = attributes[, site_col_att]
-    attrib = attributes[, -match(site_col_att, colnames(attributes))]
+  if (!identical(nrow(coords), nrow(attributes))) {
+    stop("coords and attributes need to have the same number of rows")
   }
-  browser()
-
+  if (max_sim > max_dist) {
+    stop("max_sim must be less than max_dist")
+  }
+  if (!is.null(cols)) {
+    crd = coords[, match_cols2(coords, cols, c("x", "y"))]
+    site_labs = coords[, match_cols2(coords, cols, c("site"))]
+    site_col_att = match_cols2(attributes, cols, c("site"))
+    site_labs_a = attributes[[site_col_att]]
+    attrib = attributes[, -(site_col_att)]
+  }
+  if (!all(sapply(crd, is.numeric))) {
+    stop("Coordinates are not numeric.")
+  }
+  if (!all(sapply(attrib, is.numeric))) {
+    stop("Some attributes are not numeric")
+  }
+  if (!identical(site_labs, site_labs_a)) {
+    ord = match(site_labs, site_labs_a, nomatch = 0)
+    if (!identical(site_labs, site_labs_a[ord])) {
+      stop("Site labels in coords not matching labels in attributes.")
+    }
+    attrib = attrib[ord,]
+  }
+  calc_weights(crd, attrib, site_labs, max_dist, max_sim)
 }
 
 
@@ -77,6 +94,7 @@ calc_weights = function(coords, attributes, labels, max_dist, max_sim) {
   setnames(hab_dist, "dist_rank", "hab_rank")
   weights = euclid_dist[hab_dist, on = c("site", "neigh")][, weight := (1 - (dist_rank - 1)^2 / max_dist^2)^4 * (1 - (hab_rank - 1)^2 / max_sim^2)^4]
   weights[, c("dist_rank", "hab_rank") := NULL]
+  setDF(weights)
   weights
 }
 
@@ -97,7 +115,7 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D)), pairs = NULL) {
   b <- rep(1L:n, each = n)
   out = data.table(site = ids[a], neigh = ids[b], dist = as.numeric(D[cbind(a, b)]))
   if (!is.null(pairs)) { # This requires first creating full n x n data.frame out. Could be avoided, but indexing gets complicated.
-    setDT(pairs)
+    pairs = data.table::as.data.table(pairs)
     setkeyv(pairs, colnames(pairs))
     setkeyv(out, c("site", "neigh"))
     out = out[pairs]
@@ -157,7 +175,7 @@ eco_dist <- function(x, labels = NULL, max_neigh = 200, subset = NULL, method = 
     stop("All elements in subset not found in labels.")
   }
   out$dist = vegd_p(as.matrix(x), ind_mat, method)
-  setDT(out)
+  out = data.table::as.data.table(out) # Cannot use setDT here, may cause global modifications.
   setorderv(out, c("site", "dist", "neigh"))
   out[, "dist_rank" := 1:.N, by = "site"]
   if (max_neigh < n) {

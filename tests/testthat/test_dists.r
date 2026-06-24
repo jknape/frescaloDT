@@ -26,7 +26,7 @@ setDT(train_vasc)
 
 tv = dcast(train_vasc, V1~V2, fun.aggregate = length)
 
-edist = eco_dist(tv[, -1], labels = tv$V1, include = dists_fortran[,c("V1", "V2")], max_neigh = 100, method = "bray")
+edist = eco_dist(tv[, -1], labels = tv$V1, subset = dists_fortran[,c("V1", "V2")], max_neigh = 100, method = "bray")
 
 sim_fortran = read.table("testdata/sim.txt", header = FALSE)
 
@@ -51,6 +51,55 @@ expect_lt(max(abs(joint_weights$weight - joint_weights$i.weight)), 1e-5)
 
 
 sum(tv[,1] != sample_locs$V1)
-compute_weights0(sample_locs[,c("V2", "V3")], tv[,-1], labels = sample_locs$V1, max_dist = 200, max_sim = 100)
 
+weights = compute_weights(sample_locs, tv[sample(404),], max_dist = 200, max_sim = 100, cols = c(y = "V3", x = "V2", site = "V1"))
+setDT(weights)
+
+weights_fortran = read.table("testdata/weights.txt", header = FALSE)
+setDT(weights_fortran)
+
+joint_weights = weights[weights_fortran, on = c(site = "V1", neigh = "V2")]
+
+plot(joint_weights$V3,joint_weights$weight)
+
+expect_lt(max(abs(joint_weights$V3 - joint_weights$weight)), 1e-4)
+
+
+# Why different?
+
+# Works:
+euclid_dist = eco_dist(sample_locs[,2:3], labels = sample_locs[,1], max_neigh = 200, method = "euclidean")
+setDT(euclid_dist)
+hab_dist = eco_dist(tv[,-1], labels = tv[,1], max_neigh = 100, subset = as.data.frame(euclid_dist)[,c("site", "neigh")], method = "bray")
+euclid_dist[site == "TA00" & neigh == "TA10"]
+
+# Does not work:
+euclid_dist = eco_dist(sample_locs[,2:3], labels = sample_locs[,1], max_neigh = 200, method = "euclidean")
+euclid_dist[3,]
+tmp = euclid_dist[,c("site", "neigh")]
+euclid_dist[3,]
+hab_dist = eco_dist(tv[,-1], labels = tv[,1], max_neigh = 100, subset = tmp, method = "bray")
+euclid_dist[3,]
+
+setDT(euclid_dist)
+euclid_dist[site == "TA00" & neigh == "TA10"]
+
+
+
+
+setDT(hab_dist)
+setnames(hab_dist, "dist_rank", "hab_rank")
+weights = euclid_dist[hab_dist, on = c("site", "neigh")][, weight := (1 - (dist_rank - 1)^2 / 200^2)^4 * (1 - (hab_rank - 1)^2 / 100^2)^4]
+
+euclid_dist[site == "TA00" & neigh == "TA10"]
+setDT(dists_fortran)
+setDT(sim_fortran)
+dists_fortran[sim_fortran, on = c("V1", "V2")]
+hab_dist[sim_fortran, on = c(site = "V1", neigh = "V2")]
+euclid_dist[dists_fortran, on = c(site = "V1", neigh = "V2")]
+
+euclid_dist[site == "TA00" & neigh == "TA10"]
+
+joint_weights = weights[weights_fortran, on = c(site = "V1", neigh = "V2")]
+plot(joint_weights$weight, joint_weights$V3)
 
