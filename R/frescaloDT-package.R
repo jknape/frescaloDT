@@ -9,6 +9,7 @@
 #' @importFrom data.table data.table
 #' @importFrom data.table dcast
 #' @importFrom data.table is.data.table
+#' @importFrom data.table as.data.table
 #' @importFrom data.table set
 #' @importFrom data.table setcolorder
 #' @importFrom data.table setDF

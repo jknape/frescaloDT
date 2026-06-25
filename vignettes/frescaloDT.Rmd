@@ -1,0 +1,158 @@
+---
+title: "frescaloDT"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{frescaloDT}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<style>
+body .main-container,
+body .container-fluid,
+body .container {
+  max-width: 1400px !important;
+  width: 1400px !important;
+}
+</style>
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+# Basic usage
+
+The package contains data on a subset of bryophyte observations used in the main frescalo paper (Hill 2012) that are distributed with the original fortran code.
+To run frescalo on these data, first load some packages.
+```{r setup}
+library(frescaloDT)
+library(dplyr)
+library(ggplot2)
+```
+
+The subset bryophyte data consists of lists of species for each of 404 hectads and 10 different years.
+```{r}
+head(bryophyte)
+```
+
+
+## Compute weights
+
+Frescalo uses weights that compare the similarity among pairs of sites.
+These weights are computed from the physical proximity and ecological/habitat similarity between sites.
+The physical locations of the hectad are in the data frame `hectad_locations`.
+```{r}
+head(hectad_locations)
+```
+
+Ecological similarity between sites is computed from presence absence data on 1191 vascular plants in the hectads.
+These data are in the `vascular_plants` data frame.
+```{r}
+dim(vascular_plants)
+vascular_plants[1:6, 1:5]
+```
+
+
+Weights can be computed from these two data frames using the function `compute_weights`. 
+The function takes a data frame with coordinates (argument `coords`) and a data frame with ecological composition as input (argument `attributes`)
+and outputs weights computed as in Hill (2012) between each site and all the sites in its neighbourhood.
+
+The first column of the data frame with coordinates should contain the name of the locations, the second column should contain the x coordinates and the third the y coordinates.
+The ecological compositions data frame should also have the name of the locations in the first column while remaining columns describe the ecological composition of the sites, in this case using the presence or absence of vascular plants.
+The `hectad_locations` and `vascular_plants` data frames already have this structure, so we can compute the weights without any additional formatting.
+```{r}
+weights = compute_weights(hectad_locations, vascular_plants)
+```
+By default, neighbourhoods of each site/hectad are first restricted to the 200 nearest sites.
+Out of these, the 100 most ecologically similar sites in terms of Bray-Curtis distance are then defined as the final neighbourhood following Hill (2012).
+The weights are computed using the formula
+
+$$
+w_{ii`} = \Big(1 - \frac{(k-1)^2}{200^2}\Big)^4 \Big(1 - \frac{(l-1)^2}{100^2}\Big)^4
+$$
+
+where $k$ is the $k$th neareast site to target site $i$, and $l$ is the rank of the ecological similarity of $i'$ among the 200 sites nearest to target site $i$ (only computed for the 100 most similar such sites, see Hill 2012).
+
+
+## Run the frescalo algorithm
+
+Having the neigbourhood weights we can now run the frescalo algorithm.
+```{r}
+fr = frescalo(bryophyte, weights)
+```
+
+The function outputs a frescalo object that contains the important output from the algorithm.
+The `summary` function can be used to show some basic information.
+```{r}
+summary(fr)
+```
+
+### Species frequencies
+
+Frequencies of species in the neighbourhood of each hectad can be extracted using the `frequencies` function.
+```{r}
+head(frequencies(fr))
+```
+The column `freq` containst neighbourhood weighed mean species frequencies before upscaling, and the column `Freq_1` contains the adjusted (upscaled) species frequencies.
+
+We can show the effect of the scaling across sites with the function `check_rescaling`.
+```{r}
+check_rescaling(fr)
+```
+Each line corresponds to the species frequencies of a hectad.
+
+We can also plot the observed weighted mean neighbourhood frequencies of an example species.
+```{r}
+frequencies(fr) |> filter(species == "Bry_100") |> left_join(hectad_locations, by = c(location = "hectad")) |> # Add coordinates
+  ggplot(aes(x = x, y = y, fill = freq)) + geom_tile() + 
+  theme_minimal() + scale_fill_distiller(palette = "Greens", direction = 1, limits = c(0,.6)) + coord_equal()
+```
+
+Compare these to the adjusted species frequencies.
+```{r}
+frequencies(fr) |> filter(species == "Bry_100") |> left_join(hectad_locations, by = c(location = "hectad")) |> # Add coordinates
+  ggplot(aes(x = x, y = y, fill = Freq_1)) + geom_tile() + 
+  theme_minimal() + scale_fill_distiller(palette = "Greens", direction = 1, limits = c(0,.6)) + coord_equal()
+```
+
+### Temporal change
+
+The function `timefactors` extracts information about estimated temporal change of species.
+```{r}
+head(timefactors(fr))
+```
+
+We can use this information to show change in estimated time factors, here for two example species.
+```{r, fig.height = 8}
+timefactors(fr) |> filter(species %in% c("Bry_1", "Bry_249")) |>
+  ggplot(aes(x = time, y = tf)) + geom_linerange(aes(ymin = tf - 2*tf_se, ymax = tf + 2*tf_se)) + 
+  geom_point() + facet_wrap("species", ncol = 1) + theme_minimal()
+```
+
+
+
+## Additional information
+
+### Benchmarks
+
+It may be of interest to list the species being treated as benchmarks for each size.
+This is done by the `benchmark_species` function.
+```{r}
+b_spec = benchmark_species(fr)
+head(b_spec)
+```
+
+Which species are most commonly being used as benchmarks?
+```{r}
+b_spec |> group_by(species) |> summarize(n = n()) |> arrange(-n) |> print(n = 15)
+```
+
+How many benchmark species are used for each hectad?
+```{r}
+b_spec |> group_by(location) |> summarize(n = n()) |> arrange(-n) |> print(n = 15)
+```

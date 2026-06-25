@@ -23,6 +23,7 @@ Plot unscaled and rescaled neighbourhood species frequency curves.
 }
 \examples{
 data(bryophyte)
-fr = frescalo(bryophyte, bryophyte_weights)
+weights = compute_weights(hectad_locations, vascular_plants)
+fr = frescalo(bryophyte, weights)
 check_rescaling(fr, max_sites = 50)
 }

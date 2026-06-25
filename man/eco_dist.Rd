@@ -29,7 +29,13 @@ Underlying C code for distance computations is based on code from the vegdist fu
 The original code is modified mainly to avoid the need to compute full distance matrices corresponding to all pairs of sites.
 }
 \examples{
-# Simulate distances
+# Compute bray-curtis distance for vascular plant data among the 200 closest
+# neighbours of each hectad
+spat_dist = euclid_dist(hectad_locations[,c("x", "y")], labels = hectad_locations[[1]])
+eco_dist(vascular_plants[,-1], labels = vascular_plants$hectad, max_neigh = 100,
+         subset = spat_dist[, c("site", "neigh")])
+
+# Simulated small example
 X = exp(matrix(rnorm(30), ncol = 5))
 # Keep the two neighbours closest to each site:
 eco_dist(X, max_neigh = 2)

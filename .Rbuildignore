@@ -4,3 +4,5 @@
 ^dev
 ^\.positai$
 ^\.claude$
+^doc$
+^Meta$

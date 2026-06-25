@@ -1,7 +1,7 @@
 #' Bryophyte data
 #'
 #' A subset of bryophyte observations analyzed in Hill 2012, and
-#' distributed with its fortran code.
+#' distributed with the fortran frescalo code.
 #'
 #' @name bryophyte
 #' @format ## `bryophyte`
@@ -15,13 +15,24 @@
 #' @references Hill, M. O. 2012. Local frequency as a key to interpreting species occurrence data when recording effort is not known.
 "bryophyte"
 
+
 #' @rdname bryophyte
-#' @format ## `bryophyte_weights`
-#' A data frame with 35549 rows and 3 columns:
+#' @format ## `hectad_locations`
+#' A data frame with 404 rows and 3 columns:
 #' \describe{
 #'   \item{hectad}{Id of target hectad.}
-#'   \item{neighbour}{Id of neighbour hectad.}
-#'   \item{weight}{Similarity weight.}
+#'   \item{x}{x coordinate of hectad.}
+#'   \item{y}{y coordinate of hectad.}
 #' }
-"bryophyte_weights"
+"hectad_locations"
+
+#' @rdname bryophyte
+#' @format ## `vascular_plants`
+#' A data frame with 404 rows and 1192 columns:
+#' \describe{
+#'   \item{hectad}{Id of target hectad.}
+#'   \item{other columns}{Presence of absence of vascular plant species in hectad. One column for each vascular plant species.}
+#' }
+"vascular_plants"
+
 

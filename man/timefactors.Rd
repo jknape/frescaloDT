@@ -16,7 +16,7 @@ A data frame with time factors across species.
 Extract time factors from a frescalo object.
 }
 \examples{
-data(bryophyte)
-fr = frescalo(bryophyte, bryophyte_weights)
+weights = compute_weights(hectad_locations, vascular_plants)
+fr = frescalo(bryophyte, weights)
 head(timefactors(fr))
 }

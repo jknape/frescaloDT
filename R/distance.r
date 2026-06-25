@@ -11,6 +11,8 @@
 #' use a dedicated function, such as st_dist from the sf package.
 #'
 #' @export
+#' @examples
+#' euclid_dist(hectad_locations[,c("x", "y")], labels = hectad_locations$hectad)
 euclid_dist = function(crd, labels = NULL, max_neigh = 200, max_dist = Inf)  {
   crd = as.data.frame(crd)
   n <- nrow(crd)
@@ -73,6 +75,9 @@ euclid_dist = function(crd, labels = NULL, max_neigh = 200, max_dist = Inf)  {
 #'            are used to identify the content.
 #' @returns A data frame with columns site, neigh, and the corresponding weight.
 #' @export
+#'
+#' @examples
+#' weights = compute_weights(hectad_locations, vascular_plants)
 compute_weights = function(coords, attributes, max_sp = 200, max_neigh = 100, cols = NULL) {
   coords = as.data.frame(coords)
   attributes = as.data.frame(attributes)
@@ -177,7 +182,13 @@ dist2df.mat <- function(D, ids = seq_len(nrow(D)), pairs = NULL) {
 #' The original code is modified mainly to avoid the need to compute full distance matrices corresponding to all pairs of sites.
 #' @export
 #' @examples
-#' # Simulate distances
+#' # Compute bray-curtis distance for vascular plant data among the 200 closest
+#' # neighbours of each hectad
+#' spat_dist = euclid_dist(hectad_locations[,c("x", "y")], labels = hectad_locations[[1]])
+#' eco_dist(vascular_plants[,-1], labels = vascular_plants$hectad, max_neigh = 100,
+#'          subset = spat_dist[, c("site", "neigh")])
+#'
+#' # Simulated small example
 #' X = exp(matrix(rnorm(30), ncol = 5))
 #' # Keep the two neighbours closest to each site:
 #' eco_dist(X, max_neigh = 2)

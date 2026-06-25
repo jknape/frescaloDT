@@ -54,8 +54,8 @@ The implementation uses similar conventions to the original fortran program. E.g
 to avoid divisions by zero or other issues that can cause the algorithm to otherwise fail numerically.
 }
 \examples{
-data(bryophyte)
-fr = frescalo(bryophyte, bryophyte_weights)
+weights = compute_weights(hectad_locations, vascular_plants)
+fr = frescalo(bryophyte, weights)
 summary(fr)
 head(frequencies(fr))
 head(timefactors(fr))

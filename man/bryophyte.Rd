@@ -3,7 +3,8 @@
 \docType{data}
 \name{bryophyte}
 \alias{bryophyte}
-\alias{bryophyte_weights}
+\alias{hectad_locations}
+\alias{vascular_plants}
 \title{Bryophyte data}
 \format{
 \subsection{\code{bryophyte}}{
@@ -16,13 +17,22 @@ A data frame with 78332 rows and 3 columns:
 }
 }
 
-\subsection{\code{bryophyte_weights}}{
+\subsection{\code{hectad_locations}}{
 
-A data frame with 35549 rows and 3 columns:
+A data frame with 404 rows and 3 columns:
 \describe{
 \item{hectad}{Id of target hectad.}
-\item{neighbour}{Id of neighbour hectad.}
-\item{weight}{Similarity weight.}
+\item{x}{x coordinate of hectad.}
+\item{y}{y coordinate of hectad.}
+}
+}
+
+\subsection{\code{vascular_plants}}{
+
+A data frame with 404 rows and 1192 columns:
+\describe{
+\item{hectad}{Id of target hectad.}
+\item{other columns}{Presence of absence of vascular plant species in hectad. One column for each vascular plant species.}
 }
 }
 }
@@ -32,11 +42,13 @@ A data frame with 35549 rows and 3 columns:
 \usage{
 bryophyte
 
-bryophyte_weights
+hectad_locations
+
+vascular_plants
 }
 \description{
 A subset of bryophyte observations analyzed in Hill 2012, and
-distributed with its fortran code.
+distributed with the fortran frescalo code.
 }
 \references{
 Hill, M. O. 2012. Local frequency as a key to interpreting species occurrence data when recording effort is not known.

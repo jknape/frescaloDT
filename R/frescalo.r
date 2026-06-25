@@ -28,8 +28,8 @@
 #'
 #'
 #' @examples
-#' data(bryophyte)
-#' fr = frescalo(bryophyte, bryophyte_weights)
+#' weights = compute_weights(hectad_locations, vascular_plants)
+#' fr = frescalo(bryophyte, weights)
 #' summary(fr)
 #' head(frequencies(fr))
 #' head(timefactors(fr))
@@ -127,8 +127,6 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
 
   freqs$species = species$species[match(freqs$spec_id, species$spec_id)]
   freqs$location = sites$location[match(freqs$location_id, sites$location_id)]
-  freqs$spec_id = NULL
-  freqs$location_id = NULL
   setcolorder(freqs, c("location", "species",  "observed", "freq", "Freq_1", "SD_Frq1", "rank", "rank_scaled"))
 
   tfs$species = species$species[match(tfs$spec_id, species$spec_id)]
@@ -137,8 +135,12 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   tfs$time_id = NULL
   setcolorder(tfs, c("species", "time", "tf", "tf_se", "n_obs", "sptot", "esttot"))
 
-  setDF(freqs) # Allows copy on modify while avoiding risk of changing frescalo object when returning via frequencies()
+  setDF(freqs) # Copy on modify avoids risk of changing frescalo object via frequencies() etc
   setDF(tfs)
+  setDF(sites)
+  setDF(species)
+  setDF(times)
+  setDF(sampling_effort)
   out = list(call = match.call(),
              data_names = data_names,
              weights_names = weights_names,
@@ -147,7 +149,7 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
              bench_exclude = bench_exclude, sampling_effort = sampling_effort,
              n_obs = nrow(data), n_weights = nrow(weights))
   class(out) = "frescalo"
-  check_phi(out, prob = phi_prob)
+  check_phi(out, prob = phi_prob, silent = TRUE)
   out
 }
 
@@ -243,7 +245,8 @@ print.summary.frescalo = function(x, ...) {
 #'
 #' @examples
 #' data(bryophyte)
-#' fr = frescalo(bryophyte, bryophyte_weights)
+#' weights = compute_weights(hectad_locations, vascular_plants)
+#' fr = frescalo(bryophyte, weights)
 #' head(frequencies(fr))
 #' @export
 frequencies = function(object) {
@@ -251,7 +254,10 @@ frequencies = function(object) {
   #freqs$spec_id = NULL
   #freqs$samp_id = NULL
   #setDF(freqs)
-  object$freqs
+  frq = object$freqs
+  frq$spec_id = NULL
+  frq$location_id = NULL
+  frq
 }
 
 
@@ -262,8 +268,8 @@ frequencies = function(object) {
 #' @returns A data frame with time factors across species.
 #'
 #' @examples
-#' data(bryophyte)
-#' fr = frescalo(bryophyte, bryophyte_weights)
+#' weights = compute_weights(hectad_locations, vascular_plants)
+#' fr = frescalo(bryophyte, weights)
 #' head(timefactors(fr))
 #' @export
 timefactors = function(object) {
@@ -273,11 +279,38 @@ timefactors = function(object) {
   object$tfs
 }
 
-check_phi = function(object, prob = .985, plot = FALSE) {
+
+#' Extract the species that are considered benchmarks for each site.
+#'
+#' @param object An object as returned from the frescalo function.
+#'
+#' @returns A dataframe with the species used as benchmarks for each site.
+#' @export
+#'
+#' @examples
+#' data(bryophyte)
+#' weights = compute_weights(hectad_locations, vascular_plants)
+#' fr = frescalo(bryophyte, weights)
+#' head(benchmark_species(fr))
+benchmark_species = function(object) {
+  species = location = bwght = rank_scaled = bench = NULL
+  sp = as.data.table(object$species)
+  frq = as.data.table(object$freqs)
+  # Below need to match computation in benchmark_proportions()
+  bs = sp[frq, list(location, species, bench = bwght * (rank_scaled < object$Rstar | rank == 1)), on = "spec_id"][bench > .99]
+  bs$bench = NULL
+  setDF(bs)
+  bs
+}
+
+
+check_phi = function(object, prob = .985, plot = FALSE, silent = FALSE) {
   obs_p = stats::quantile(object$sites$phi_orig, probs = prob)
   phi_ok = obs_p < object$phi_target
-  message(paste0(round(100 * prob, 1), " percentile of input phi = ", round(obs_p,2), "\n",
+  if (!silent) {
+    message(paste0(round(100 * prob, 1), " percentile of input phi = ", round(obs_p,2), "\n",
                 "Target phi = ", round(object$phi_target, 2)))
+  }
   if (!phi_ok) {
     warning("Target value of phi may be too small.")
   }
@@ -320,7 +353,8 @@ check_r = function(object) {
 #' before and after rescaling.
 #' @examples
 #' data(bryophyte)
-#' fr = frescalo(bryophyte, bryophyte_weights)
+#' weights = compute_weights(hectad_locations, vascular_plants)
+#' fr = frescalo(bryophyte, weights)
 #' check_rescaling(fr, max_sites = 50)
 #' @export
 check_rescaling = function(object, max_sites = 500) {
@@ -360,7 +394,7 @@ check_rescaling = function(object, max_sites = 500) {
 #' Note: this is rather probability of detection under a sampling effort sufficient for all benchmarks to be found(?)
 #  By assumption of the frescalo method trends in recording probabilities are identical across sites.
 #' @export
-recording_prob = function(object, species, s = 1) {
+recording_probs = function(object, species, s = 1) {
   Freq_1 = tf = NULL
   freqs = data.table::as.data.table(object$freqs)
   tfs = data.table::as.data.table(object$tfs)
