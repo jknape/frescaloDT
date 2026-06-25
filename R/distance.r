@@ -1,9 +1,7 @@
 #' Compute euclidean distances and their ranks coordinates.
 #'
-#' @param data A data frame with site names and x and y coordinates.
-#' @param site Name of column with site/location name or id.
-#' @param x Name of column containing x coordinate.
-#' @param y Name of column containing y coordinate.
+#' @param crd A data frame with x and y coordinates.
+#' @param labels Vector with names of sites. Should have length equal to number of columns in crd.
 #' @param max_neigh The largest number of neighbours to keep. Defaults to keeping the 200 closest neighbours of each site.
 #' @param max_dist Distances larger than this are omitted in the output. Not applied by default.
 #'
@@ -13,24 +11,7 @@
 #' use a dedicated function, such as st_dist from the sf package.
 #'
 #' @export
-euclid_dist = function(data, site, x, y, max_neigh = 200, max_dist = Inf)  {
-  max_neigh = min(as.integer(max_neigh), nrow(data))
-  dists = apply(data[,c(x,y)], 1, function(row) {ds =  sqrt((row[[x]] - data[[x]]) ^ 2 + (row[[y]] - data[[y]]) ^ 2)
-                                        if (max_dist < Inf) {ds = ds[ds < max_dist]}
-                                        n = min(max_neigh, length(ds));
-                                        ds = sort(ds, index.return = TRUE, method = "quick");
-                                        list(ds$ix[1:max_neigh], ds$x[1:max_neigh], 1:max_neigh)})
-  n = sapply(dists, function(l) {length(l[[1]])})
-  ntot = sum(n)
-  out = data.frame(site = rep(data[[site]], times = n))
-  out$neigh =   do.call(c, lapply(dists, function(l) {data[[site]][l[[1]]]}))
-  out$dist =   do.call(c, lapply(dists, `[[`, i = 2))
-  out$dist_rank =   do.call(c, lapply(dists, `[[`, i = 3))
-  out
-}
-
-# Not working
-euclid_dist2 = function(crd, labels = NULL, max_neigh = 200, max_dist = Inf)  {
+euclid_dist = function(crd, labels = NULL, max_neigh = 200, max_dist = Inf)  {
   crd = as.data.frame(crd)
   n <- nrow(crd)
   if (is.null(labels)) {
@@ -81,29 +62,36 @@ euclid_dist2 = function(crd, labels = NULL, max_neigh = 200, max_dist = Inf)  {
 
 #' Compute neighbourhood weights according to Hill 2012.
 #'
-#' @param coords
-#' @param attributes Data frame containing
-#' @param max_dist Maximum number of spatial neighbours to consider.
-#' @param max_sim Maximum neighbourhood size.
-#' @param cols
-#'
-#' @returns
+#' @param coords Data frame specifying locations of sites. Should have three columns:
+#'               a column with site labels, a columns with x coordinates and a columns with y coordinates.
+#' @param attributes Data frame containing habitat or community data. Should have a column with site labels
+#'                   and columns with habitat or comunity composition.
+#' @param max_sp Maximum number of spatial neighbours to consider.
+#' @param max_neigh Maximum neighbourhood size. Must be smaller than max_sp.
+#' @param cols A list or vector with elements named site, x, and y and values giving the corresponding
+#'            column names in coords and attributes. If NULL, the order of the columns in coords and attributes
+#'            are used to identify the content.
+#' @returns A data frame with columns site, neigh, and the corresponding weight.
 #' @export
-#'
-#' @examples
-compute_weights = function(coords, attributes, max_dist = 200, max_sim = 100, cols = NULL) {
+compute_weights = function(coords, attributes, max_sp = 200, max_neigh = 100, cols = NULL) {
   coords = as.data.frame(coords)
   attributes = as.data.frame(attributes)
   if (!identical(nrow(coords), nrow(attributes))) {
     stop("coords and attributes need to have the same number of rows")
   }
-  if (max_sim > max_dist) {
-    stop("max_sim must be less than max_dist")
+  if (max_neigh > max_sp) {
+    stop("max_neigh must be less than max_sp")
   }
   if (!is.null(cols)) {
     crd = coords[, match_cols2(coords, cols, c("x", "y"))]
     site_labs = coords[, match_cols2(coords, cols, c("site"))]
     site_col_att = match_cols2(attributes, cols, c("site"))
+    site_labs_a = attributes[[site_col_att]]
+    attrib = attributes[, -(site_col_att)]
+  } else {
+    crd = coords[, 2:3]
+    site_labs = coords[, 1]
+    site_col_att = 1
     site_labs_a = attributes[[site_col_att]]
     attrib = attributes[, -(site_col_att)]
   }
@@ -120,22 +108,22 @@ compute_weights = function(coords, attributes, max_dist = 200, max_sim = 100, co
     }
     attrib = attrib[ord,]
   }
-  calc_weights(crd, attrib, site_labs, max_dist, max_sim)
+  calc_weights(crd, attrib, site_labs, max_sp, max_neigh)
 }
 
 
 # Assumes coords, attributes and labels have the same ordering.
-calc_weights = function(coords, attributes, labels, max_dist, max_sim) {
+calc_weights = function(coords, attributes, labels, max_dist, max_neigh) {
   dist = weight = dist_rank = hab_rank = NULL
   #euclid_dist = eco_dist(coords, labels = labels, max_neigh = max_dist, method = "euclidean")
-  spat_dist = euclid_dist2(coords, labels = labels, max_neigh = max_dist)
-  hab_dist = eco_dist(attributes, labels = labels, max_neigh = max_sim, subset = spat_dist[,c("site", "neigh")], method = "bray")
+  spat_dist = euclid_dist(coords, labels = labels, max_neigh = max_dist)
+  hab_dist = eco_dist(attributes, labels = labels, max_neigh = max_neigh, subset = spat_dist[,c("site", "neigh")], method = "bray")
   setDT(spat_dist)
   spat_dist[, dist := NULL]
   setDT(hab_dist)
   hab_dist[, dist := NULL]
   setnames(hab_dist, "dist_rank", "hab_rank")
-  weights = spat_dist[hab_dist, on = c("site", "neigh")][, weight := (1 - (dist_rank - 1)^2 / max_dist^2)^4 * (1 - (hab_rank - 1)^2 / max_sim^2)^4]
+  weights = spat_dist[hab_dist, on = c("site", "neigh")][, weight := (1 - (dist_rank - 1)^2 / max_dist^2)^4 * (1 - (hab_rank - 1)^2 / max_neigh^2)^4]
   weights[, c("dist_rank", "hab_rank") := NULL]
   setDF(weights)
   weights

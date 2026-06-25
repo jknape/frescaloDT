@@ -39,7 +39,7 @@ expect_lt(max(abs(1 - sim_fortran$V4 - edist$dist)), 1e-3)
 #plot(weights$weight, bryophyte_weights$weight)
 
 
-weights = compute_weights(sample_locs, tv[sample(1:404),], max_dist = 200, max_sim = 100, cols = c(y = "V3", x = "V2", site = "V1"))
+weights = compute_weights(sample_locs, tv[sample(1:404),], max_sp = 200, max_neigh = 100, cols = c(y = "V3", x = "V2", site = "V1"))
 setDT(weights)
 
 weights_fortran = read.table("testdata/weights.txt", header = FALSE)

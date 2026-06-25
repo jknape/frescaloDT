@@ -362,17 +362,15 @@ check_rescaling = function(object, max_sites = 500) {
 #' @export
 recording_prob = function(object, species, s = 1) {
   Freq_1 = tf = NULL
-  setDT(object$freqs)
-  setDT(object$tfs)
-  keep_f = which(object$freqs$species %in% species)
-  keep_tfs = which(object$tfs$species %in% species)
-  out = merge(object$freqs[keep_f, c("species", "location", "Freq_1")],
-                          object$tfs[keep_tfs, c("species", "time", "tf")], allow.cartesian = TRUE)
+  freqs = data.table::as.data.table(object$freqs)
+  tfs = data.table::as.data.table(object$tfs)
+  keep_f = which(freqs$species %in% species)
+  keep_tfs = which(tfs$species %in% species)
+  out = merge(freqs[keep_f, c("species", "location", "Freq_1")],
+                          tfs[keep_tfs, c("species", "time", "tf")], allow.cartesian = TRUE)
   out[, "p_occ" := 1 - (1 - s * Freq_1)^tf]
   out$tf = NULL
   out$Freq_1 = NULL
-  setDF(object$freqs)
-  setDF(object$tfs)
   setDF(out)
   out
 }
