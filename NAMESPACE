@@ -2,6 +2,7 @@
 
 S3method(base::print,summary.frescalo)
 S3method(base::summary,frescalo)
+export(benchmark_proportions)
 export(benchmark_species)
 export(check_rescaling)
 export(compute_weights)

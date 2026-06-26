@@ -20,7 +20,6 @@ A data.frame with estimated occupancy probabilities.
 Compute estimated recording probabilities for a given level of effort.
 }
 \note{
-Estimated probability of recording species under standard effort, sit = 1 meaning all benchmarks found (Bijlsma).
-This depends on the proportion of benchmarks (see Prescott 2025).
-Note: this is rather probability of detection under a sampling effort sufficient for all benchmarks to be found(?)
+Estimated probability of recording species under standard effort, sit = 1 meaning all benchmarks found.
+This depends on the proportion of benchmarks.
 }

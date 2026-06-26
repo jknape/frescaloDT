@@ -120,7 +120,7 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   freqs[, c("Freq_1", "SD_Frq1", "rank", "rank_scaled") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(location_id), .SDcols = c("location_id", "freq")]
 
   # Compute effort per site and time as proportion of benchmarks found.
-  sampling_effort = benchmark_proportions(data, freqs, species, Rstar = Rstar, bench_exclude = bench_exclude)
+  sampling_effort = benchmark_proportions0(data, freqs, species, Rstar = Rstar, bench_exclude = bench_exclude)
 
   # Compute time factors.
   tfs = tfcalc(data, freqs, species, sites, times, sampling_effort)
@@ -276,7 +276,9 @@ timefactors = function(object) {
   #if (is.null(object$tfs)) {
     #tfalc....
   #}
-  object$tfs
+  tfs = object$tfs
+  tfs$iter_tf = tfs$iter_tf_se = NULL
+  tfs
 }
 
 
@@ -302,6 +304,33 @@ benchmark_species = function(object) {
   setDF(bs)
   bs
 }
+
+
+#' Extract the proportion of benchmark species found for each site and time.
+#' These are used for effort correction when computing time factors.
+#'
+#' @param object An object as returned from the frescalo function.
+#'
+#' @returns A dataframe with the proportion of benchmark species found.
+#' @export
+#'
+#' @examples
+#' data(bryophyte)
+#' weights = compute_weights(hectad_locations, vascular_plants)
+#' fr = frescalo(bryophyte, weights)
+#' head(benchmark_proportions(fr))
+benchmark_proportions = function(object) {
+  s_eff = as.data.table(object$sampling_effort)
+  times = as.data.table(object$times[, c("time", "time_id")])
+  s_eff = times[s_eff, on = "time_id"]
+  sites = as.data.table(object$site[, c("location", "location_id")])
+  s_eff = sites[s_eff, on = "location_id"]
+  setDF(s_eff)
+  s_eff$time_id = s_eff$location_id = NULL
+  s_eff
+}
+
+
 
 
 check_phi = function(object, prob = .985, plot = FALSE, silent = FALSE) {
@@ -389,10 +418,8 @@ check_rescaling = function(object, max_sites = 500) {
 #' @returns A data.frame with estimated occupancy probabilities.
 #'
 #' @note
-#' Estimated probability of recording species under standard effort, sit = 1 meaning all benchmarks found (Bijlsma).
-#' This depends on the proportion of benchmarks (see Prescott 2025).
-#' Note: this is rather probability of detection under a sampling effort sufficient for all benchmarks to be found(?)
-#  By assumption of the frescalo method trends in recording probabilities are identical across sites.
+#' Estimated probability of recording species under standard effort, sit = 1 meaning all benchmarks found.
+#' This depends on the proportion of benchmarks.
 #' @export
 recording_probs = function(object, species, s = 1) {
   Freq_1 = tf = NULL

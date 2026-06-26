@@ -1,4 +1,4 @@
-benchmark_proportions = function(data, freqs, species, Rstar = .27, bench_exclude = NULL) {
+benchmark_proportions0 = function(data, freqs, species, Rstar = .27, bench_exclude = NULL) {
   location_id = spec_id = time_id = rank_scaled = bench = nbench = Freq_1 = bwght = spec = NULL # To avoid Notes in R CMD check
 
   species[, bwght := 1]

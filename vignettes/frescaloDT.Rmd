@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.width = 7,
-  fig.height = 5
+  fig.height = 7
 )
 ```
 
@@ -108,14 +108,16 @@ Each line corresponds to the species frequencies of a hectad.
 
 We can also plot the observed weighted mean neighbourhood frequencies of an example species.
 ```{r}
-frequencies(fr) |> filter(species == "Bry_100") |> left_join(hectad_locations, by = c(location = "hectad")) |> # Add coordinates
+frequencies(fr) |> filter(species == "Bry_100") |> 
+  left_join(hectad_locations, by = c(location = "hectad")) |> # Add coordinates
   ggplot(aes(x = x, y = y, fill = freq)) + geom_tile() + 
-  theme_minimal() + scale_fill_distiller(palette = "Greens", direction = 1, limits = c(0,.6)) + coord_equal()
+  theme_minimal() + scale_fill_distiller(palette = "Greens", direction = 1, limits = c(0,.6)) + coord_fixed()
 ```
 
 Compare these to the adjusted species frequencies.
 ```{r}
-frequencies(fr) |> filter(species == "Bry_100") |> left_join(hectad_locations, by = c(location = "hectad")) |> # Add coordinates
+frequencies(fr) |> filter(species == "Bry_100") |> 
+  left_join(hectad_locations, by = c(location = "hectad")) |> # Add coordinates
   ggplot(aes(x = x, y = y, fill = Freq_1)) + geom_tile() + 
   theme_minimal() + scale_fill_distiller(palette = "Greens", direction = 1, limits = c(0,.6)) + coord_equal()
 ```
