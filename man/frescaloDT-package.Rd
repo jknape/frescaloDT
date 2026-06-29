@@ -11,5 +11,10 @@ Implements the frescalo algorithm of Hill (2012) for estimating species distribu
 \author{
 \strong{Maintainer}: Jonas Knape \email{jonas.knape@slu.se} (\href{https://orcid.org/0000-0002-8012-5131}{ORCID})
 
+Authors:
+\itemize{
+  \item Jonas Knape \email{jonas.knape@slu.se} (\href{https://orcid.org/0000-0002-8012-5131}{ORCID})
+}
+
 }
 \keyword{internal}

@@ -1,5 +1,5 @@
 benchmark_proportions0 = function(data, freqs, species, Rstar = .27, bench_exclude = NULL) {
-  location_id = spec_id = time_id = rank_scaled = bench = nbench = Freq_1 = bwght = spec = NULL # To avoid Notes in R CMD check
+  location_id = spec_id = time_id = rank_scaled = bench = nbench = freq_est = bwght = spec = NULL # To avoid Notes in R CMD check
 
   species[, bwght := 1]
   species[species %in% bench_exclude, bwght := .001]
@@ -10,7 +10,7 @@ benchmark_proportions0 = function(data, freqs, species, Rstar = .27, bench_exclu
 }
 
 tfcalc = function(data, freqs, species, sites, times, sampeff) {
-  location_id = spec_id = time_id = rank_scaled = Freq_1 = spec = NULL # To avoid Notes in R CMD check
+  location_id = spec_id = time_id = rank_scaled = freq_est = spec = NULL # To avoid Notes in R CMD check
 
   iocc = data.table(spec_id = rep(species$spec_id, each = nrow(times)), time_id = rep(times$time_id, nrow(species)))
   iocc0 = data[, list(occ = list(location_id)), by = list(spec_id, time_id)]
@@ -20,7 +20,7 @@ tfcalc = function(data, freqs, species, sites, times, sampeff) {
   jind = iocc$spec_id
   tind = iocc$time_id
   iocc = iocc$occ
-  f_l = freqs[order(spec_id), list(list(Freq_1)), by = spec_id]$V1
+  f_l = freqs[order(spec_id), list(list(freq_est)), by = spec_id]$V1
 
   ntf = length(jind)
   tfs = data.table(spec_id = jind, time_id = tind, tf = numeric(ntf), tf_se = numeric(ntf),

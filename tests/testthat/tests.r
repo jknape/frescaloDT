@@ -29,15 +29,15 @@ comp_frq = freqs[freqs_fortran, on = c("location" = "Location", "species" = "Spe
 comp_frq2 = freqs2[freqs_fortran, on = c("location" = "Location", "species" = "Species")]
 
 expect_lt(max(abs(comp_frq$freq - comp_frq$Freq__)), 1e-4)
-expect_lt(max(abs(comp_frq$Freq_1 - comp_frq$i.Freq_1)), 1e-4)
-expect_lt(max(abs(comp_frq$SD_Frq1 - comp_frq$i.SD_Frq1)), 1e-4)
+expect_lt(max(abs(comp_frq$freq_est - comp_frq$i.freq_est)), 1e-4)
+expect_lt(max(abs(comp_frq$freq_est_sd - comp_frq$i.freq_est_sd)), 1e-4)
 expect_lt(max(abs(comp_frq$rank - comp_frq$Rank)), 3)
 expect_lt(max(abs(comp_frq$rank_scaled - comp_frq$Rank_1)), .02)
 
 
 expect_lt(max(abs(comp_frq2$freq - comp_frq2$Freq__)), 1e-2)
-expect_lt(max(abs(comp_frq2$Freq_1 - comp_frq2$i.Freq_1)), 5e-2)
-expect_lt(max(abs(comp_frq2$SD_Frq1 - comp_frq2$i.SD_Frq1)), 5e-2)
+expect_lt(max(abs(comp_frq2$freq_est - comp_frq2$i.freq_est)), 5e-2)
+expect_lt(max(abs(comp_frq2$freq_est_sd - comp_frq2$i.freq_est_sd)), 5e-2)
 expect_lt(max(abs(comp_frq2$rank_scaled - comp_frq2$Rank_1)), 5e-1)
 
 # Time factors

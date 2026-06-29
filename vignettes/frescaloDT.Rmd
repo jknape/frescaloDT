@@ -98,7 +98,7 @@ Frequencies of species in the neighbourhood of each hectad can be extracted usin
 ```{r}
 head(frequencies(fr))
 ```
-The column `freq` containst neighbourhood weighed mean species frequencies before upscaling, and the column `Freq_1` contains the adjusted (upscaled) species frequencies.
+The column `freq` containst neighbourhood weighed mean species frequencies before upscaling, and the column `freq_est` contains the adjusted (upscaled) species frequencies.
 
 We can show the effect of the scaling across sites with the function `check_rescaling`.
 ```{r}
@@ -118,7 +118,7 @@ Compare these to the adjusted species frequencies.
 ```{r}
 frequencies(fr) |> filter(species == "Bry_100") |> 
   left_join(hectad_locations, by = c(location = "hectad")) |> # Add coordinates
-  ggplot(aes(x = x, y = y, fill = Freq_1)) + geom_tile() + 
+  ggplot(aes(x = x, y = y, fill = freq_est)) + geom_tile() + 
   theme_minimal() + scale_fill_distiller(palette = "Greens", direction = 1, limits = c(0,.6)) + coord_equal()
 ```
 

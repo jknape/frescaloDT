@@ -11,14 +11,13 @@ frescalo(
   Rstar = 0.27,
   phi_prob = 0.985,
   bench_exclude = NULL,
-  data_names = NULL,
-  weights_names = NULL
+  cols = NULL
 )
 }
 \arguments{
 \item{data}{Data frame with the samples. By default, first column is interpreted as the name or id of the sampled site,
 the second column as the observed species, and the third column the time of observation. This can be changed
-via the \code{data_names} and \code{weihgts_names} arguments.}
+via the \code{cols} argument.}
 
 \item{weights}{Data frame with neighborhood weights where the first column is the target site, second column is the
 neighbor, and third column is the weight in the neighborhood of the target site.}
@@ -35,12 +34,8 @@ Defaults to 0.985.}
 
 \item{bench_exclude}{Vector of names of species not to be used as benchmarks when computing time factors.}
 
-\item{data_names}{A named list or character vector with elements named location, spec, time,
-and values equal to the corresponding column names in data.
-Defaults to NULL in which case the order of the columns is used.}
-
-\item{weights_names}{A named list or character vector with elements named location, neigh, weight,
-and values equal to the corresponding column names in data.
+\item{cols}{A named list or character vector with elements named location, spec, time,neigh, weight,
+and values equal to the corresponding column names in data and weights.
 Defaults to NULL in which case the order of the columns is used.}
 }
 \value{
