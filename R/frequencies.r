@@ -1,34 +1,25 @@
 # Compute neighbourhoud frequencies
 nfcalc = function(data, weights, sites, species, return_type = "dt") {
-  weight = location_id = spec_id = neigh_id = pres = NULL # To avoid Notes in R CMD check
+  weight = site_id = spec_id = neigh_id = pres = NULL # To avoid Notes in R CMD check
   # L254
   #swgt = weights[, .(wgttot = sum(wgt), wgt2 = sum(wgt^2)),by = samp]
-  swgt = weights[, list(wgttot = sum(weight), wgt2 = sum(weight^2)), by = location_id]
-  setorder(swgt, location_id)
+  swgt = weights[, list(wgttot = sum(weight), wgt2 = sum(weight^2)), by = site_id]
+  setorder(swgt, site_id)
 
-  set(sites, j = "wn2", value = swgt$wgttot^2 / (swgt$wgt2 + 1e-12)) # Save for computation in fresca
+  set(sites, j = "wgt_n2", value = swgt$wgttot^2 / (swgt$wgt2 + 1e-12)) # Save for computation in fresca
 
-  swgt_inv = weights[, list(neighs = list(location_id), neighw = list(weight)), by = neigh_id]
+  swgt_inv = weights[, list(neighs = list(site_id), neighw = list(weight)), by = neigh_id]
   setorder(swgt_inv, neigh_id)
 
-  stopifnot(identical(sites$location_id, swgt$location_id))
-  stopifnot(identical(sites$location_id, swgt_inv$neigh_id))
+  stopifnot(identical(sites$site_id, swgt$site_id))
+  stopifnot(identical(sites$site_id, swgt_inv$neigh_id))
 
-  occ = data[, list(occ_ind = list(unique(spec_id))), by = location_id]
-  occ = occ[sites, on = c("location_id")]
+  occ = data[, list(occ_ind = list(unique(spec_id))), by = site_id]
+  occ = occ[sites, on = c("site_id")]
 
-  set(sites, j = "n_spec", value = sapply(occ$occ_ind, length))
+  set(sites, j = "species_count", value = sapply(occ$occ_ind, length))
 
-  stopifnot(identical(sites$location_id, occ$location_id))
-
-  # L267
-  #idat = data[ , .(idat = .N, iitot = uniqueN(spec)), by = samp]
-
-  #idata = matrix(0L, nrow = uniqueN(data$samp), ncol = uniqueN(data$spec))
-
-  # Number of detections
-  #idata = dcast(data,  samp ~ spec, fun.aggregate = length)[, -1]
-
+  stopifnot(identical(sites$site_id, occ$site_id))
 
   ffij = matrix(0, nrow = nrow(sites), ncol = nrow(species))
 
@@ -51,51 +42,10 @@ nfcalc = function(data, weights, sites, species, return_type = "dt") {
       set(sites, j = "occ_ind", value = occ_ind)
       return(ffij)
   }
-  freqs = data.table(location_id = rep(1:nrow(ffij), ncol(ffij)), spec_id = rep(1:ncol(ffij), each = nrow(ffij)), freq = as.vector(ffij), observed = FALSE)
-  pind = do.call(c, mapply(function(j,i) {i + (j-1L)*nrow(ffij)} , occ_ind, 1:nrow(ffij)))
+  freqs = data.table(site_id = rep(1:nrow(ffij), ncol(ffij)), spec_id = rep(1:ncol(ffij), each = nrow(ffij)), freq_obs = as.vector(ffij), observed = FALSE)
+  pind = do.call(c, mapply(function(j,i) {i + (j-1L)*nrow(ffij)} , occ_ind, 1:nrow(ffij), SIMPLIFY = FALSE))
   set(freqs, i = pind, j = "observed", TRUE)
 
-  #if(!identical(freqs[samp_id == 114 & pres]$spec_id, sort(occ_ind[[114]]))) {
-  #  browser()
-  #}
   freqs
 }
-
-
-
-# # Temporary function, should not be needed later.
-# fwf = function(data, weights, return_type = "dt") {
-#   setDT(data)
-#   setnames(data, c("samp", "spec", "time"))
-#
-#   weights = weights[,1:3]
-#   setnames(weights, c("samp", "samp1", "wgt"))
-#
-#
-#   stopifnot(setequal(unique(weights$samp), unique(weights$samp1))) # How handle this??
-#
-#   sites = data.table(samp = sort(unique(c(weights$samp))))[, samp_id := 1:.N]
-#
-#
-#   # Filter sites in data not present in weights
-#   exclude_sites = setdiff(unique(data$samp), sites$samp)
-#   if (length(exclude_sites) > 0) {
-#     message(paste("Site(s)", paste(exclude_sites, collapse = ", "), "not present in weights, removed."))
-#   }
-#   data =  data[!(samp %in% exclude_sites)]
-#
-#   times = data.table(time = sort(unique(data$time)))[, time_id := 1:.N]
-#
-#   species = data.table(spec = sort(unique(data$spec)))[, spec_id := 1:.N] # Note: species may have been removed, if only present in excluded sites.
-#
-#   weights[ , samp_id := sites$samp_id[pmatch(weights$samp, sites$samp ,duplicates.ok = TRUE)]]
-#   weights[ , samp1_id := sites$samp_id[pmatch(weights$samp1, sites$samp ,duplicates.ok = TRUE)]]
-#
-#   data[ , spec_id := species$spec_id[match(data$spec, species$spec)]]
-#   data[ , samp_id := sites$samp_id[match(data$samp, sites$samp)]]
-#   data[ , time_id := times$time_id[match(data$time, times$time)]]
-#
-#   fwf0(data,weights, sites, species, return_type)
-# }
-
 

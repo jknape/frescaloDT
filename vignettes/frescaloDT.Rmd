@@ -45,7 +45,7 @@ head(bryophyte)
 
 Frescalo uses weights that compare the similarity among pairs of sites.
 These weights are computed from the physical proximity and ecological/habitat similarity between sites.
-The physical locations of the hectad are in the data frame `hectad_locations`.
+The spatial locations of the hectad are in the data frame `hectad_locations`.
 ```{r}
 head(hectad_locations)
 ```
@@ -62,8 +62,8 @@ Weights can be computed from these two data frames using the function `compute_w
 The function takes a data frame with coordinates (argument `coords`) and a data frame with ecological composition as input (argument `attributes`)
 and outputs weights computed as in Hill (2012) between each site and all the sites in its neighbourhood.
 
-The first column of the data frame with coordinates should contain the name of the locations, the second column should contain the x coordinates and the third the y coordinates.
-The ecological compositions data frame should also have the name of the locations in the first column while remaining columns describe the ecological composition of the sites, in this case using the presence or absence of vascular plants.
+The first column of the data frame with coordinates should contain the name of the sites, the second column should contain the x coordinates and the third the y coordinates.
+The ecological compositions data frame should also have the name of the sites in the first column while remaining columns describe the ecological composition of the sites, in this case using the presence or absence of vascular plants.
 The `hectad_locations` and `vascular_plants` data frames already have this structure, so we can compute the weights without any additional formatting.
 ```{r}
 weights = compute_weights(hectad_locations, vascular_plants)
@@ -76,12 +76,12 @@ $$
 w_{ii`} = \Big(1 - \frac{(k-1)^2}{200^2}\Big)^4 \Big(1 - \frac{(l-1)^2}{100^2}\Big)^4
 $$
 
-where $k$ is the $k$th neareast site to target site $i$, and $l$ is the rank of the ecological similarity of $i'$ among the 200 sites nearest to target site $i$ (only computed for the 100 most similar such sites, see Hill 2012).
+where $k$ is the $k$th nearest site to target site $i$, and $l$ is the rank of the ecological similarity of $i'$ among the 200 sites nearest to target site $i$ (only computed for the 100 most similar such sites, see Hill 2012).
 
 
 ## Run the frescalo algorithm
 
-Having the neigbourhood weights we can now run the frescalo algorithm.
+Having the neighbourhood weights we can now run the frescalo algorithm.
 ```{r}
 fr = frescalo(bryophyte, weights)
 ```
@@ -98,7 +98,7 @@ Frequencies of species in the neighbourhood of each hectad can be extracted usin
 ```{r}
 head(frequencies(fr))
 ```
-The column `freq` containst neighbourhood weighed mean species frequencies before upscaling, and the column `freq_est` contains the adjusted (upscaled) species frequencies.
+The column `freq` contains neighbourhood weighed mean species frequencies before upscaling, and the column `freq_est` contains the adjusted (upscaled) species frequencies.
 
 We can show the effect of the scaling across sites with the function `check_rescaling`.
 ```{r}
@@ -109,15 +109,15 @@ Each line corresponds to the species frequencies of a hectad.
 We can also plot the observed weighted mean neighbourhood frequencies of an example species.
 ```{r}
 frequencies(fr) |> filter(species == "Bry_100") |> 
-  left_join(hectad_locations, by = c(location = "hectad")) |> # Add coordinates
-  ggplot(aes(x = x, y = y, fill = freq)) + geom_tile() + 
+  left_join(hectad_locations, by = c(site = "hectad")) |> # Add coordinates
+  ggplot(aes(x = x, y = y, fill = freq_obs)) + geom_tile() + 
   theme_minimal() + scale_fill_distiller(palette = "Greens", direction = 1, limits = c(0,.6)) + coord_fixed()
 ```
 
 Compare these to the adjusted species frequencies.
 ```{r}
 frequencies(fr) |> filter(species == "Bry_100") |> 
-  left_join(hectad_locations, by = c(location = "hectad")) |> # Add coordinates
+  left_join(hectad_locations, by = c(site = "hectad")) |> # Add coordinates
   ggplot(aes(x = x, y = y, fill = freq_est)) + geom_tile() + 
   theme_minimal() + scale_fill_distiller(palette = "Greens", direction = 1, limits = c(0,.6)) + coord_equal()
 ```
@@ -156,5 +156,5 @@ b_spec |> group_by(species) |> summarize(n = n()) |> arrange(-n) |> print(n = 15
 
 How many benchmark species are used for each hectad?
 ```{r}
-b_spec |> group_by(location) |> summarize(n = n()) |> arrange(-n) |> print(n = 15)
+b_spec |> group_by(site) |> summarize(n = n()) |> arrange(-n) |> print(n = 15)
 ```

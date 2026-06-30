@@ -10,7 +10,19 @@ frequencies(object)
 \item{object}{An object as returned from the frescalo function.}
 }
 \value{
-A data frame with species frequencies across locations.
+A data frame with species frequencies across sites and the following columns and corresponding names in the original fortran output:
+
+\tabular{llll}{
+\strong{column} \tab \strong{fortran} \tab \strong{meaning}\cr
+\code{site} \tab \code{Location} \tab Name of site.\cr
+\code{species} \tab \code{Species} \tab Species name.\cr
+\code{observed} \tab \code{Pres} \tab Whether species was recorded at site.\cr
+\code{freq_obs} \tab \code{Freq} \tab Observed neigbourhood frequency of species. \cr
+\code{freq_est} \tab \code{Freq_1} \tab Neighbourhood frequency of species after rescaling. \cr
+\code{freq_est_se} \tab \code{SD_Frq1} \tab Standard error of \code{freq_est}. \cr
+\code{rank} \tab \code{Rank} \tab Rank of estimated species frequency in the neighbourhood. \cr
+\code{rank_scaled} \tab \code{Rank_1} \tab Rescaled rank, rank divided by estimated number of species.\cr
+}
 }
 \description{
 Extract species frequencies from a frescalo object.

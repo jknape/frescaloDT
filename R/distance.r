@@ -106,6 +106,9 @@ compute_weights = function(coords, attributes, max_sp = 200, max_neigh = 100, co
   if (!all(sapply(attrib, is.numeric))) {
     stop("Some attributes are not numeric")
   }
+  if (anyDuplicated(site_labs)) {
+    stop("Labels not unique, data should have only one row per site.")
+  }
   if (!identical(site_labs, site_labs_a)) {
     ord = match(site_labs, site_labs_a, nomatch = 0)
     if (!identical(site_labs, site_labs_a[ord])) {

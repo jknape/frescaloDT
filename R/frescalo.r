@@ -13,7 +13,7 @@
 #'                 If \code{phi_target} is set to NA, the quantile corresponding to \code{phi_prob} is taken as the target.
 #'                 Defaults to 0.985.
 #' @param bench_exclude Vector of names of species not to be used as benchmarks when computing time factors.
-#' @param cols  A named list or character vector with elements named location, spec, time,neigh, weight,
+#' @param cols  A named list or character vector with elements named site, spec, time,neigh, weight,
 #'                   and values equal to the corresponding column names in data and weights.
 #'                   Defaults to NULL in which case the order of the columns is used.
 #'
@@ -33,29 +33,32 @@
 #' @export
 frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .985, bench_exclude = NULL,
                     cols = NULL) {
-  location_id = location = spec_id = time_id = neigh_id = phi0 = freq = NULL # To avoid Notes in R CMD check
+  site_id = site = spec_id = time_id = neigh_id = phi0 = freq_obs = NULL # To avoid Notes in R CMD check
 
   if (is.null(cols)) {
+    if (ncol(data) < 3 | ncol(weights) < 3) {
+      stop("Arguments data and weights need to have three columns.")
+    }
     data = data[,1:3]
     cols = c(colnames(data), colnames(weights)[2:3])
-    names(cols) = c("location", "species", "time", "neigh", "weight")
+    names(cols) = c("site", "species", "time", "neigh", "weight")
     data = data.table::as.data.table(data) # Should copy, otherwise may be reordered on return!
-    setnames(data, c("location", "species", "time"))
+    setnames(data, c("site", "species", "time"))
     weights = weights[,1:3]
     weights = data.table::as.data.table(weights)
-    setnames(weights, c("location", "neigh", "weight"))
+    setnames(weights, c("site", "neigh", "weight"))
   } else {
-    cind = match_cols2(data, cols, c("location", "species", "time"))
+    cind = match_cols2(data, cols, c("site", "species", "time"))
     data = data.table::as.data.table(data[cind])
-    setnames(data, c("location", "species", "time"))
-    cind = match_cols2(weights, cols, c("location", "neigh", "weight"))
+    setnames(data, c("site", "species", "time"))
+    cind = match_cols2(weights, cols, c("site", "neigh", "weight"))
     weights = data.table::as.data.table(weights[cind])
-    setnames(weights, c("location", "neigh", "weight"))
+    setnames(weights, c("site", "neigh", "weight"))
   }
   data = data[!duplicated(data)]
 
-  stopifnot(setequal(unique(weights$location), unique(weights$neigh))) # How handle this??
-  sites = data.table(location = sort(unique(c(weights$location))))[, location_id := 1:.N]
+  stopifnot(setequal(unique(weights$site), unique(weights$neigh))) # How handle this??
+  sites = data.table(site = sort(unique(c(weights$site))))[, site_id := 1:.N]
 
   # Argument checking
   if (!is.na(phi_target)) {
@@ -71,11 +74,11 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
      stop("Argument Rstar should be positive.")
   }
   # Filter sites in data not present in weights
-  exclude_sites = setdiff(unique(data$location), sites$location)
+  exclude_sites = setdiff(unique(data$site), sites$site)
   if (length(exclude_sites) > 0) {
     message(paste("Site(s)", paste(exclude_sites, collapse = ", "), "not present in weights, removed."))
   }
-  data =  data[!(location %in% exclude_sites)]
+  data =  data[!(site %in% exclude_sites)]
 
   # Key tables for species and times
   species = data.table(species = sort(unique(data$species)))[, spec_id := 1:.N] # Note: species may have been removed, if only present in excluded sites.
@@ -90,26 +93,26 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   }
 
   # Add keys to weights
-  weights[ , location_id := sites$location_id[pmatch(weights$location, sites$location ,duplicates.ok = TRUE)]]
-  weights[ , neigh_id := sites$location_id[pmatch(weights$neigh, sites$location ,duplicates.ok = TRUE)]]
+  weights[ , site_id := sites$site_id[pmatch(weights$site, sites$site ,duplicates.ok = TRUE)]]
+  weights[ , neigh_id := sites$site_id[pmatch(weights$neigh, sites$site ,duplicates.ok = TRUE)]]
 
   # Add keys to data
   sp_id = species$spec_id[match(data$species, species$species)]
   data[ , spec_id := sp_id]
-  data[ , location_id := sites$location_id[match(data$location, sites$location)]]
+  data[ , site_id := sites$site_id[match(data$site, sites$site)]]
   data[ , time_id := times$time_id[match(data$time, times$time)]]
 
   # Compute frequency weighted mean frequencies
   freqs = nfcalc(data, weights, sites, species)
   if (is.na(phi_target)) {
-    phi_target = freqs[ , list(phi0 = sum(freq^2)/sum(freq)), by = "location_id"][, quantile(phi0, prob = phi_prob, names = FALSE)]
+    phi_target = freqs[ , list(phi0 = sum(freq_obs^2)/sum(freq_obs)), by = "site_id"][, quantile(phi0, prob = phi_prob, names = FALSE)]
   }
   nc = nrow(freqs)
-  set(freqs, j = c("freq_est", "freq_est_sd", "rank", "rank_scaled"),
+  set(freqs, j = c("freq_est", "freq_est_se", "rank", "rank_scaled"),
       value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank_scaled = R´, Hill P200.
-  setkey(freqs, location_id) # Not needed, minimal improvement if any?
+  setkey(freqs, site_id) # Not needed, minimal improvement if any?
 
-  freqs[, c("freq_est", "freq_est_sd", "rank", "rank_scaled") := frescaDT2(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(location_id), .SDcols = c("location_id", "freq")]
+  freqs[, c("freq_est", "freq_est_se", "rank", "rank_scaled") := frescaDT(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(site_id), .SDcols = c("site_id", "freq_obs")]
 
   # Compute effort per site and time as proportion of benchmarks found.
   sampling_effort = benchmark_proportions0(data, freqs, species, Rstar = Rstar, bench_exclude = bench_exclude)
@@ -118,17 +121,18 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   tfs = tfcalc(data, freqs, species, sites, times, sampling_effort)
 
   freqs$species = species$species[match(freqs$spec_id, species$spec_id)]
-  freqs$location = sites$location[match(freqs$location_id, sites$location_id)]
-  setcolorder(freqs, c("location", "species",  "observed", "freq", "freq_est", "freq_est_sd", "rank", "rank_scaled"))
+  freqs$site = sites$site[match(freqs$site_id, sites$site_id)]
+  setcolorder(freqs, c("site", "species",  "observed", "freq_obs", "freq_est", "freq_est_se", "rank", "rank_scaled"))
+  setDF(freqs) # Copy on modify avoids risk of changing frescalo object via frequencies() etc
 
   tfs$species = species$species[match(tfs$spec_id, species$spec_id)]
   tfs$spec_id = NULL
   tfs$time = times$time[match(tfs$time_id, times$time_id)]
   tfs$time_id = NULL
-  setcolorder(tfs, c("species", "time", "tf", "tf_se", "n_obs", "sptot", "esttot"))
-
-  setDF(freqs) # Copy on modify avoids risk of changing frescalo object via frequencies() etc
+  setcolorder(tfs, c("species", "time", "tf", "tf_se", "count", "occ_adj", "occ_est"))
   setDF(tfs)
+
+  setcolorder(sites, c("site","species_count", "phi_obs", "alpha", "spnum_obs", "spnum_est", "wgt_n2", "phi_out", "iter_fresca", "conv_fresca"))
   setDF(sites)
   setDF(species)
   setDF(times)
@@ -195,8 +199,8 @@ summary.frescalo = function(object, ...) {
         n_obs = object$n_obs,
         n_weights = object$n_weights,
         phi_target = object$phi_target,
-        phi_in_quant = quantile(object$sites$phi_orig, probs = c(.25,.5,.75, object$phi_prob)),
-        mean_nsp = c(mean(object$sites$n_spec), mean(object$sites$spnum_orig), mean(object$sites$spnum_new)))
+        phi_obs_quant = quantile(object$sites$phi_obs, probs = c(.25,.5,.75, object$phi_prob)),
+        mean_nsp = c(mean(object$sites$species_count), mean(object$sites$spnum_obs), mean(object$sites$spnum_est)))
   class(out) = "summary.frescalo"
   out
 }
@@ -217,8 +221,8 @@ print.summary.frescalo = function(x, ...) {
   cat("\n")
   cat("\n Target phi:", x$phi_target)
   cat("\n")
-  cat("\n Quantiles of input phi:\n")
-  print(x$phi_in_quant, digits = 2)
+  cat("\n Quantiles of observed phi:\n")
+  print(x$phi_obs_quant, digits = 2)
   cat("\n######################################")
   cat("\n\n  Mean number of species per site")
   cat("\n  Observed:", round(x$mean_nsp[1],1))
@@ -231,8 +235,19 @@ print.summary.frescalo = function(x, ...) {
 #'
 #' @param object An object as returned from the frescalo function.
 #'
-#' @returns A data frame with species frequencies across locations.
+#' @returns A data frame with species frequencies across sites and the following columns and corresponding names in the original fortran output:
 #'
+#' \tabular{llll}{
+#' \strong{column} \tab \strong{fortran} \tab \strong{meaning}\cr
+#' \code{site} \tab \code{Location} \tab Name of site.\cr
+#' \code{species} \tab \code{Species} \tab Species name.\cr
+#' \code{observed} \tab \code{Pres} \tab Whether species was recorded at site.\cr
+#' \code{freq_obs} \tab \code{Freq} \tab Observed neigbourhood frequency of species. \cr
+#' \code{freq_est} \tab \code{Freq_1} \tab Neighbourhood frequency of species after rescaling. \cr
+#' \code{freq_est_se} \tab \code{SD_Frq1} \tab Standard error of \code{freq_est}. \cr
+#' \code{rank} \tab \code{Rank} \tab Rank of estimated species frequency in the neighbourhood. \cr
+#' \code{rank_scaled} \tab \code{Rank_1} \tab Rescaled rank, rank divided by estimated number of species.\cr
+#' }
 #'
 #' @examples
 #' data(bryophyte)
@@ -247,7 +262,7 @@ frequencies = function(object) {
   #setDF(freqs)
   frq = object$freqs
   frq$spec_id = NULL
-  frq$location_id = NULL
+  frq$site_id = NULL
   frq
 }
 
@@ -256,7 +271,21 @@ frequencies = function(object) {
 #'
 #' @param object An object as returned from the frescalo function.
 #'
-#' @returns A data frame with time factors across species.
+#' @returns A data frame with time factors across species and the following columns and corresponding names in the original fortran output:
+#'
+#' \tabular{llll}{
+#' \strong{column} \tab \strong{fortran} \tab \strong{meaning}\cr
+#' \code{species} \tab \code{Species} \tab Species name.\cr
+#' \code{time} \tab \code{Time} \tab Time period.\cr
+#' \code{tf} \tab \code{TFactor} \tab Estimated time factor.\cr
+#' \code{tf_se} \tab \code{St_Dev} \tab Standard error of time factor. \cr
+#' \code{count} \tab \code{Count} \tab Number of observed occurrences of the species at given time. \cr
+#' \code{occ_adj} \tab \code{spt} \tab Number of occurrences after down-weighting site time combinations with low proportion of benchmark species found. \cr
+#' \code{occ_est} \tab \code{est} \tab Estimated number of occurrences. Should be the same as \code{occ_adj} if algorithm converged. \cr
+#' \code{occ_0} \tab \code{N>0.00} \tab Number of locations with non-zero occurrence probability.\cr
+#' \code{occ_098} \tab \code{N>0.98} \tab Number of locations with occurrence probability greater than 0.98.\cr
+#' \code{conv_tfcalc} \tab  \tab Binary variable indicating that the routine calculating time factors converged.\cr
+#' }
 #'
 #' @examples
 #' weights = compute_weights(hectad_locations, vascular_plants)
@@ -268,9 +297,52 @@ timefactors = function(object) {
     #tfalc....
   #}
   tfs = object$tfs
+  if (any(!tfs$conv_tfcalc)) {
+    warning("Computation of time factors did no converge for all sites.")
+  }
+#  if (!full) {
+#    tfs$occ_adj = tfs$occ_est = tfs$occ_0 = tfs$occ_098 = tfs$conv_tfcalc = NULL
+#  }
   tfs$iter_tf = tfs$iter_tf_se = NULL
   tfs
 }
+
+#' Extract information about sites from a frescalo object.
+#'
+#' @param object An object as returned from the frescalo function.
+#'
+#' @returns A data frame with a row for each sites, and information about its neighbourhood.
+#'
+#' \tabular{llll}{
+#' \strong{column} \tab \strong{fortran} \tab \strong{meaning}\cr
+#' \code{site} \tab \code{Location} \tab Name of site.\cr
+#' \code{species_count} \tab \code{No_spp} \tab Number of species observed at site.\cr
+#' \code{phi_obs} \tab \code{Phi_in} \tab Values of phi (frequency-weighted mean frequency) computed from observed frequencies.\cr
+#' \code{alpha} \tab \code{Alpha} \tab Sampling effort multiplier required to reach \code{phi_target}.\cr
+#' \code{spnum_obs} \tab \code{Spnum_in} \tab Sum of observed neighbourhood frequencies, a raw estimate of number of species. \cr
+#' \code{spnum_est} \tab \code{Spnum_out} \tab Sum of neighbourhood frequencies after rescaling, an estimate of number of species. \cr
+#' \code{wgt_n2} \tab \code{Wgt_n2} \tab Ratio of square of sum of neighbourhood weights to the sum of squared neighbourhood weights.
+#'                                       Higher values indicate higher similarity among sites in neighbourhood. \cr
+#' \code{phi_out} \tab \code{Phi_out} \tab Values of phi after rescaling. Should be close to \code{phi_target} if algorithm converged. \cr
+#' \code{iter_fresca} \tab \code{Iter} \tab Number of iterations required for the rescaling routine. \cr
+#' \code{conv_fresca} \tab  \tab Indicates whether the rescaling routine converged.\cr
+#' }
+#'
+#'
+#' @examples
+#' weights = compute_weights(hectad_locations, vascular_plants)
+#' fr = frescalo(bryophyte, weights)
+#' head(sites(fr))
+#' @export
+sites = function(object) {
+  #if (is.null(object$tfs)) {
+  #tfalc....
+  #}
+  sites = object$sites
+  sites$site_id = NULL
+  sites
+}
+
 
 
 #' Extract the species that are considered benchmarks for each site.
@@ -286,11 +358,11 @@ timefactors = function(object) {
 #' fr = frescalo(bryophyte, weights)
 #' head(benchmark_species(fr))
 benchmark_species = function(object) {
-  species = location = bwght = rank_scaled = bench = NULL
+  species = site = bwght = rank_scaled = bench = NULL
   sp = as.data.table(object$species)
   frq = as.data.table(object$freqs)
   # Below need to match computation in benchmark_proportions()
-  bs = sp[frq, list(location, species, bench = bwght * (rank_scaled < object$Rstar | rank == 1)), on = "spec_id"][bench > .99]
+  bs = sp[frq, list(site, species, bench = bwght * (rank_scaled < object$Rstar | rank == 1)), on = "spec_id"][bench > .99]
   bs$bench = NULL
   setDF(bs)
   bs
@@ -314,10 +386,10 @@ benchmark_proportions = function(object) {
   s_eff = as.data.table(object$sampling_effort)
   times = as.data.table(object$times[, c("time", "time_id")])
   s_eff = times[s_eff, on = "time_id"]
-  sites = as.data.table(object$site[, c("location", "location_id")])
-  s_eff = sites[s_eff, on = "location_id"]
+  sites = as.data.table(object$site[, c("site", "site_id")])
+  s_eff = sites[s_eff, on = "site_id"]
   setDF(s_eff)
-  s_eff$time_id = s_eff$location_id = NULL
+  s_eff$time_id = s_eff$site_id = NULL
   s_eff
 }
 
@@ -325,7 +397,7 @@ benchmark_proportions = function(object) {
 
 
 check_phi = function(object, prob = .985, plot = FALSE, silent = FALSE) {
-  obs_p = stats::quantile(object$sites$phi_orig, probs = prob)
+  obs_p = stats::quantile(object$sites$phi_obs, probs = prob)
   phi_ok = obs_p < object$phi_target
   if (!silent) {
     message(paste0(round(100 * prob, 1), " percentile of input phi = ", round(obs_p,2), "\n",
@@ -335,13 +407,13 @@ check_phi = function(object, prob = .985, plot = FALSE, silent = FALSE) {
     warning("Target value of phi may be too small.")
   }
   if (plot) {
-    graphics::hist(object$sites$phi_orig, xlim = c(0, 1), xlab = "phi", main = "")
+    graphics::hist(object$sites$phi_obs, xlim = c(0, 1), xlab = "phi", main = "")
     graphics::abline(v = object$phi_target, col = "red")
   }
-  if (!all(object$sites$conv.fresca)) {
-    conv_fail = !object$sites$conv.fresca
+  if (!all(object$sites$conv_fresca)) {
+    conv_fail = !object$sites$conv_fresca
     warning(paste("phi did not converge to phi_target for all sites, increasing max.iter might help. Convergence failed for site(s):",
-                  paste(object$sites$location[conv_fail], collapse = ", ")))
+                  paste(object$sites$site[conv_fail], collapse = ", ")))
   }
   phi_ok
 }
@@ -380,18 +452,18 @@ check_r = function(object) {
 check_rescaling = function(object, max_sites = 500) {
   scaled = NULL
   if (nrow(object$sites) > max_sites) {
-    keep = object$freqs[["location"]] %in% sample(object$sites[["location"]], max_sites)
+    keep = object$freqs[["site"]] %in% sample(object$sites[["site"]], max_sites)
   } else {
     keep = TRUE
   }
-  pldat = object$freqs[keep, c("location", "rank", "rank_scaled", "freq", "freq_est")]
+  pldat = object$freqs[keep, c("site", "rank", "rank_scaled", "freq_obs", "freq_est")]
   pldat = data.table::as.data.table(pldat)
   pldat[, rank := as.numeric(rank)]
   pldat = data.table::melt(pldat,
-                           id.vars = "location", measure.vars = list(freq = c("freq", "freq_est"), rank = c("rank", "rank_scaled")),
+                           id.vars = "site", measure.vars = list(freq = c("freq_obs", "freq_est"), rank = c("rank", "rank_scaled")),
                            variable.name = "scaled", variable.factor = FALSE)
   pldat[, scaled := c("unscaled", "rescaled")[as.integer(scaled)]]
-  ggplot(data = pldat, aes(x = .data[["rank"]], y = .data[["freq"]], group = .data[["location"]])) +
+  ggplot(data = pldat, aes(x = .data[["rank"]], y = .data[["freq"]], group = .data[["site"]])) +
     geom_line(alpha = 100/min(nrow(object$sites), max_sites)) + facet_wrap("scaled", scales = "free_x") + theme_minimal()
 
 }
@@ -418,9 +490,9 @@ recording_probs = function(object, species, s = 1) {
   tfs = data.table::as.data.table(object$tfs)
   keep_f = which(freqs$species %in% species)
   keep_tfs = which(tfs$species %in% species)
-  out = merge(freqs[keep_f, c("species", "location", "freq_est")],
+  out = merge(freqs[keep_f, c("species", "site", "freq_est")],
                           tfs[keep_tfs, c("species", "time", "tf")], allow.cartesian = TRUE)
-  out[, "p_occ" := 1 - (1 - s * freq_est)^tf]
+  out[, "p_rec" := 1 - (1 - s * freq_est)^tf]
   out$tf = NULL
   out$freq_est = NULL
   setDF(out)

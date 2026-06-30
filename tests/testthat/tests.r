@@ -25,19 +25,19 @@ setDT(freqs2)
 
 
 
-comp_frq = freqs[freqs_fortran, on = c("location" = "Location", "species" = "Species")]
-comp_frq2 = freqs2[freqs_fortran, on = c("location" = "Location", "species" = "Species")]
+comp_frq = freqs[freqs_fortran, on = c("site" = "Location", "species" = "Species")]
+comp_frq2 = freqs2[freqs_fortran, on = c("site" = "Location", "species" = "Species")]
 
-expect_lt(max(abs(comp_frq$freq - comp_frq$Freq__)), 1e-4)
-expect_lt(max(abs(comp_frq$freq_est - comp_frq$i.freq_est)), 1e-4)
-expect_lt(max(abs(comp_frq$freq_est_sd - comp_frq$i.freq_est_sd)), 1e-4)
+expect_lt(max(abs(comp_frq$freq_obs - comp_frq$Freq__)), 1e-4)
+expect_lt(max(abs(comp_frq$freq_est - comp_frq$Freq_1)), 1e-4)
+expect_lt(max(abs(comp_frq$freq_est_se - comp_frq$SD_Frq1)), 1e-4)
 expect_lt(max(abs(comp_frq$rank - comp_frq$Rank)), 3)
 expect_lt(max(abs(comp_frq$rank_scaled - comp_frq$Rank_1)), .02)
 
 
-expect_lt(max(abs(comp_frq2$freq - comp_frq2$Freq__)), 1e-2)
-expect_lt(max(abs(comp_frq2$freq_est - comp_frq2$i.freq_est)), 5e-2)
-expect_lt(max(abs(comp_frq2$freq_est_sd - comp_frq2$i.freq_est_sd)), 5e-2)
+expect_lt(max(abs(comp_frq2$freq_obs - comp_frq2$Freq__)), 1e-2)
+expect_lt(max(abs(comp_frq2$freq_est - comp_frq2$Freq_1)), 5e-2)
+expect_lt(max(abs(comp_frq2$freq_est_se - comp_frq2$SD_Frq1)), 5e-2)
 expect_lt(max(abs(comp_frq2$rank_scaled - comp_frq2$Rank_1)), 5e-1)
 
 # Time factors
@@ -74,17 +74,17 @@ comp_tfs2 = comp_tfs2[-na_ind2]
 
 expect_lt(max(abs(comp_tfs$tf - comp_tfs$TFactor)), .01)
 expect_lt(max(abs(comp_tfs$tf_se - comp_tfs$St_Dev)), .02)
-expect_equal(max(abs(comp_tfs$n_obs - comp_tfs$X_Count)), 0)
-expect_lt(max(abs(comp_tfs$sptot - comp_tfs$X___spt)), .1)
-expect_equal(max(abs(comp_tfs$ic1 - comp_tfs$N.0.00)), 0)
-expect_equal(max(abs(comp_tfs$ic2 - comp_tfs$N.0.98)), 0)
-expect_lt(max(abs(comp_tfs$esttot - comp_tfs$X___est)), .1)
+expect_equal(max(abs(comp_tfs$count - comp_tfs$X_Count)), 0)
+expect_lt(max(abs(comp_tfs$occ_adj - comp_tfs$X___spt)), .1)
+expect_equal(max(abs(comp_tfs$occ_0 - comp_tfs$N.0.00)), 0)
+expect_equal(max(abs(comp_tfs$occ_098 - comp_tfs$N.0.98)), 0)
+expect_lt(max(abs(comp_tfs$occ_est - comp_tfs$X___est)), .1)
 
 expect_lt(max(abs(comp_tfs2$tf - comp_tfs2$TFactor)), .5)
 expect_lt(max(abs(comp_tfs2$tf_se - comp_tfs2$St_Dev)), .8)
-expect_equal(max(abs(comp_tfs2$n_obs - comp_tfs2$X_Count)), 0)
-expect_lt(max(abs(comp_tfs2$sptot - comp_tfs2$X___spt)), .3)
-expect_lt(max(abs(comp_tfs2$esttot - comp_tfs2$X___est)), .4)
+expect_equal(max(abs(comp_tfs2$count - comp_tfs2$X_Count)), 0)
+expect_lt(max(abs(comp_tfs2$occ_adj - comp_tfs2$X___spt)), .3)
+expect_lt(max(abs(comp_tfs2$occ_est - comp_tfs2$X___est)), .4)
 
 
 # TODO: check against output in stats file
@@ -104,6 +104,7 @@ expect_lt(max(abs(comp_tfs2$esttot - comp_tfs2$X___est)), .4)
 # Check that helper functions work
 
 expect_no_error(summary(fr))
+expect_no_error(check_rescaling(fr))
 expect_no_error(recording_probs(fr, species = c("Bry_1079")))
 expect_no_error(recording_probs(fr, species = c("Bry_11", "Bry_126")))
 expect_no_error(benchmark_species(fr))

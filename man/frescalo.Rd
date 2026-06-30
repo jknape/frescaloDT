@@ -34,7 +34,7 @@ Defaults to 0.985.}
 
 \item{bench_exclude}{Vector of names of species not to be used as benchmarks when computing time factors.}
 
-\item{cols}{A named list or character vector with elements named location, spec, time,neigh, weight,
+\item{cols}{A named list or character vector with elements named site, spec, time,neigh, weight,
 and values equal to the corresponding column names in data and weights.
 Defaults to NULL in which case the order of the columns is used.}
 }

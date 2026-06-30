@@ -10,7 +10,21 @@ timefactors(object)
 \item{object}{An object as returned from the frescalo function.}
 }
 \value{
-A data frame with time factors across species.
+A data frame with time factors across species and the following columns and corresponding names in the original fortran output:
+
+\tabular{llll}{
+\strong{column} \tab \strong{fortran} \tab \strong{meaning}\cr
+\code{species} \tab \code{Species} \tab Species name.\cr
+\code{time} \tab \code{Time} \tab Time period.\cr
+\code{tf} \tab \code{TFactor} \tab Estimated time factor.\cr
+\code{tf_se} \tab \code{St_Dev} \tab Standard error of time factor. \cr
+\code{count} \tab \code{Count} \tab Number of observed occurrences of the species at given time. \cr
+\code{occ_adj} \tab \code{spt} \tab Number of occurrences after down-weighting site time combinations with low proportion of benchmark species found. \cr
+\code{occ_est} \tab \code{est} \tab Estimated number of occurrences. Should be the same as \code{occ_adj} if algorithm converged. \cr
+\code{occ_0} \tab \code{N>0.00} \tab Number of locations with non-zero occurrence probability.\cr
+\code{occ_098} \tab \code{N>0.98} \tab Number of locations with occurrence probability greater than 0.98.\cr
+\code{conv_tfcalc} \tab  \tab Binary variable indicating that the routine calculating time factors converged.\cr
+}
 }
 \description{
 Extract time factors from a frescalo object.
