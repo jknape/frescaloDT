@@ -101,7 +101,6 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   data[ , spec_id := sp_id]
   data[ , site_id := sites$site_id[match(data$site, sites$site)]]
   data[ , time_id := times$time_id[match(data$time, times$time)]]
-
   # Compute frequency weighted mean frequencies
   freqs = nfcalc(data, weights, sites, species)
   if (is.na(phi_target)) {
@@ -111,7 +110,6 @@ frescalo = function(data, weights, phi_target = .74, Rstar = 0.27, phi_prob = .9
   set(freqs, j = c("freq_est", "freq_est_se", "rank", "rank_scaled"),
       value = list(numeric(nc), numeric(nc), integer(nc), numeric(nc))) # rank_scaled = R´, Hill P200.
   setkey(freqs, site_id) # Not needed, minimal improvement if any?
-
   freqs[, c("freq_est", "freq_est_se", "rank", "rank_scaled") := frescaDT(.SD, sites, phi_target = phi_target, irepmax = 100), keyby = list(site_id), .SDcols = c("site_id", "freq_obs")]
 
   # Compute effort per site and time as proportion of benchmarks found.
@@ -303,7 +301,7 @@ timefactors = function(object) {
 #  if (!full) {
 #    tfs$occ_adj = tfs$occ_est = tfs$occ_0 = tfs$occ_098 = tfs$conv_tfcalc = NULL
 #  }
-  tfs$iter_tf = tfs$iter_tf_se = NULL
+  tfs$iter_tf = tfs$iter_tf_se = tfs$deviance = NULL
   tfs
 }
 
